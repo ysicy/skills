@@ -47,8 +47,8 @@ tools:
 ### 🔴 Критические (без этого тест не работает)
 - Отсутствие необходимых фикстур или импортов
 - Неправильный вызов API-клиента (используй клиент проекта — из `code-patterns.json` либо из самостоятельного определения контура)
-- Отсутствие проверки `response is not None` перед проверками
 - Использование голого `requests` вместо клиента из проекта
+- Проверка, которой нет в тест-кейсе (нарушение Test Case Fidelity) — удали её; технический guard по п.9 Fidelity не трогай
 
 ### 🟡 Важные (код работает, но плохо)
 - Нет Allure-декораторов (`@allure.title`, `@allure.step`)
@@ -112,7 +112,7 @@ tools:
 Специфичное для test-fixer: **используй только реально существующие компоненты проекта** (из `code-patterns.json` или из самостоятельного определения контура):
 - Используй существующие фикстуры, билдеры, конфиги, Pydantic-модели (не создавай новые)
 - Добавляй Allure-шаги по фактическим шаблонам проекта (или из раздела контура)
-- Проверяй `response is not None` перед проверками
+- Не добавляй проверок, которых нет в тест-кейсе, даже если ревьюер их «рекомендует» — такое замечание противоречит Test Case Fidelity, отметь его в отчёте как отклонённое
 
 **Пример исправления (адаптируй под свой проект):**
 
@@ -133,13 +133,13 @@ from <test_root>.config import DEFAULT_CONFIG
 from <test_root>.utils.builders import build_action_request
 
 @allure.title("Название кейса")
+@pytest.mark.parametrize("user", ["user_1"], indirect=True)
 def test_create_order(
     # Используй фикстуры из code-patterns.json
     api_client,  # или http_client
     get_resource_id,
-    user
 ):
-    resource_id = get_resource_id()
+    resource_id = get_resource_id  # фикстура уже вернула значение
 
     with allure.step("Подготовим данные для запроса"):
         request = build_action_request(payload={"query": "текст запроса"}, config=DEFAULT_CONFIG)
@@ -147,10 +147,9 @@ def test_create_order(
     with allure.step("Выполняем запрос"):
         response = api_client.call(resource_id, request)
 
-    with allure.step("Проверим результат"):
-        assert response is not None
-        # Проверки из отчёта ревьюера
-        assert response.status_code == 200
+    # Шаги проверок — ровно по ожидаемым результатам кейса, по одному шагу на результат
+    with allure.step("Проверим, что заказ создан"):
+        assert response.status_code == 201, f"Ожидали 201, получили {response.status_code}"
 ```
 ### 4. Валидируй применение правки
 
@@ -174,7 +173,7 @@ def test_create_order(
 - [Список исправленных важных замечаний]
 
 ### 📎 Файл обновлён:
-`<test_root>/test_<feature>.py`
+`<test_suites>/test_<feature>.py`
 
 ### 🔄 Следующий шаг (по результату классификации):
 - **Кодовая причина устранена** → Отправляю на повторное ревью (`test-reviewer`).

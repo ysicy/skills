@@ -65,7 +65,7 @@ API-автотест (pytest + Allure) и прогоняет его. Всю ра
 ```
 
 Пайплайн пройдёт 7 шагов автоматически, без вопросов между ними. Финальный автотест появится
-в `<test_root>/test_suites/test_<feature>.py`, сводка прогона — в `report.json`.
+в `<test_suites>/test_<feature>.py`, сводка прогона — в `report.json`.
 
 ## Когда вас спросят
 
@@ -116,7 +116,7 @@ API-автотест (pytest + Allure) и прогоняет его. Всю ра
 | `quality-gate.json` | метрики качества и вердикты гейтов |
 | `report.json` | сводка прогона |
 | `fix-history.md` | база опыта (не затирается между прогонами) |
-| `<scope>-report-dashboard.html` | сводный HTML-отчёт прогона с вкладками (по эталону `templates/report_template.html`); публикуется в браузере |
+| `test-report-<scope>.html` | сводный HTML-отчёт прогона с вкладками (по эталону `templates/report_template.html`); публикуется в браузере |
 
 ## Траблшутинг для пользователя
 

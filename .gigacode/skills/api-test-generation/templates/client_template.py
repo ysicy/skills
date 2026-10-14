@@ -67,6 +67,32 @@ class ResourceClient:
         """
         self._not_implemented()
 
+    def create_raw(self, request: Dict[str, Any]) -> Any:
+        """
+        POST /<resource> без исключения на 4xx/5xx — для негативных кейсов
+        («ожидаю 400/403»): тест сам проверяет response.status_code и тело.
+
+        # ACTIVE-код после наследования:
+        # return self._send_request("POST", self._resource_path,
+        #                            step_title="Создание ресурса",
+        #                            raise_for_status=False, json=request)
+        """
+        return self._not_implemented()
+
+    def run_stream(self, resource_id: str, request: Dict[str, Any]) -> Any:
+        """
+        POST /<resource_path>/{id}/<stream_action> с ответом text/event-stream.
+        Возвращает SSEStream (status_code, events, events_by_type, last, find).
+
+        Хелперы под формат событий своего API (поиск события нужного типа,
+        финальное состояние) добавляй здесь или в helpers/, поверх SSEStream.find(...).
+
+        # ACTIVE-код после наследования:
+        # return self.stream_request("POST", f"{self._resource_path}/{resource_id}/<stream_action>",
+        #                            step_title="Потоковый запрос", json=request)
+        """
+        return self._not_implemented()
+
     @staticmethod
     def _not_implemented() -> None:
         """Заглушка, пока клиент не подключён к реальному HttpClient."""
