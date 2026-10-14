@@ -14,7 +14,7 @@
 Сгенерируй автотесты по Swagger: https://petstore3.swagger.io/api/v3/openapi.json
 ```
 
-Запрос обрабатывает скилл `api-test-generation` (`.gigacode/skills/SKILL.md`) — пайплайн из 7 субагентов:
+Запрос обрабатывает скилл `api-test-generation` (`.gigacode/skills/api-test-generation/SKILL.md`) — пайплайн из 7 субагентов:
 
 ```
 code-pattern-matcher → requirements-analyst → test-case-designer → test-generator → test-reviewer → test-fixer → test-validator
@@ -47,5 +47,5 @@ code-pattern-matcher → requirements-analyst → test-case-designer → test-ge
 
 - `.gigacode/design/common-principles.md` — общие правила для всех агентов. Постоянный файл: доставляется каждому агенту; если его нет, скилл повреждён — сообщи оператору.
 - `.gigacode/agents/<agent>.md` — правила каждой роли.
-- `.gigacode/skills/SKILL.md` — правила оркестратора.
+- `.gigacode/skills/api-test-generation/SKILL.md` — правила оркестратора.
 - `code-patterns.json` и другие файлы в `.gigacode/design/` — продукты прогона. Их отсутствие штатно: агенты определяют контур проекта сами.
