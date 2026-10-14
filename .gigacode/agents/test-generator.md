@@ -97,9 +97,9 @@ tools:
 
 ### 5. Проверки и валидация
 - **Источник проверок — только ожидаемые результаты тест-кейса** (Test Case Fidelity). Обязательных проверок «по умолчанию» нет: ни `response is not None`, ни «наличие ожидаемых полей», ни статус-код, если их нет в кейсе.
-- **Технический guard допустим** (`common-principles.md` → Test Case Fidelity, п.9): если проверка из кейса обращается к объекту, который может отсутствовать (`final.suggestions` при `final is None`), перед ней можно поставить `assert <объект> is not None, "<понятное сообщение>"` в том же шаге. Это не новая проверка, а защита от `AttributeError` вместо понятного падения.
-- **Пример ответа в кейсе — не список проверок.** Проверяй только то, что сформулировано в ожидаемом результате словами («навык вызван», «suggestions не пустой», «статус 200»). Конкретные значения из примера (id, даты, текст LLM) не переноси в assert'ы.
-- **Где искать значение — по смыслу, а не по подстроке.** «Навык вызван» проверяется по полю вызова (`tool_calls[*].name` / событие вызова инструмента в формате потока проекта), а не поиском имени по всему тексту ответа: имя может присутствовать в списках кандидатов (`selected_tools` и т.п.) без фактического вызова. Если по контуру и кейсу непонятно, какое поле означает факт проверки, — это `requires_operator_input`, а не догадка.
+- **Технический guard допустим** (`common-principles.md` → Test Case Fidelity, п.9): если проверка из кейса обращается к объекту, который может отсутствовать, перед ней можно поставить `assert <объект> is not None, "<понятное сообщение>"` в том же шаге. Это не новая проверка, а защита от `AttributeError` вместо понятного падения.
+- **Пример ответа в кейсе — не список проверок.** Проверяй только то, что сформулировано в ожидаемом результате словами («статус 200», «сущность создана», «список не пустой»). Конкретные значения из примера (id, даты, сгенерированный текст) не переноси в assert'ы.
+- **Где искать значение — по смыслу, а не по подстроке** (Test Case Fidelity, п.12). Проверяй поле или событие, которое фиксирует именно этот факт. Если в `code-patterns.json` → `domain_checks` есть принятый в проекте способ проверки такого факта — используй его. Если по контуру и кейсу непонятно, какое поле означает факт, — это `requires_operator_input`, а не догадка.
 - Стиль проверок (`==`, `in`/`not in`, через модель или через хелпер стрима, сообщения в assert'ах) бери из `code-patterns.json` → `assert_patterns`.
 - **Статус ответа без исключения.** Если кейс ожидает 4xx/5xx, получай ответ так, чтобы статус был доступен для проверки (`expect_status=...` / `raise_for_status=False` у клиента проекта); `pytest.raises` — только если так принято в контуре.
 
@@ -175,49 +175,46 @@ class Test<FeatureName>:
 См. `common-principles.md` → "Критерии качества → Генерация (test-generator)".
 
 ### 📎 Пример работы (адаптивный)
+
+> Пример иллюстрирует **принципы**, а не стиль: имена фикстур, клиентов, маркеров и способ проверки в твоём проекте берутся из `code-patterns.json`, а не из этого примера.
+
 - Вход: code-patterns.json (фрагмент):
   ```json
   {
-    "fixtures": [{"name": "get_thread_id"}, {"name": "runs_api"}, {"name": "user", "parametrize": "indirect"}],
-    "builders": [{"name": "build_run_request", "parameters": ["content", "config"]}],
-    "markers": {"integration": "@pytest.mark.zephyr(\"<CASE_KEY>\")"},
-    "response_handling": {"stream": "runs_api.create_stream(...) -> объект с events, find_tool_call(name), final_values()"},
-    "assert_patterns": ["assert <объект>, \"<сообщение>\"", "assert x is not None, \"<сообщение с контекстом>\""]
+    "fixtures": [{"name": "created_order", "purpose": "создаёт заказ и возвращает его id"}, {"name": "orders_api"}],
+    "builders": [{"name": "build_payment_request", "parameters": ["order_id", "amount"]}],
+    "markers": {"integration": null},
+    "response_handling": {"regular": "orders_api.<метод>() -> Pydantic-модель", "on_error_status": "raise_for_status=False -> requests.Response"},
+    "assert_patterns": ["assert x == y, \"<сообщение>\""]
   }
   ```
 
 - Вход: тест-кейс PROJ-T100
-  1. Создать тред → ответ 200
-  2. POST /threads/{thread_id}/runs/stream, content = «расскажи новости хоккея»
-  3. Ожидаемый результат: в ответе есть события
-  4. Ожидаемый результат: навык `hockey_news` вызван (пример ответа приложен)
+  1. Создать заказ → ответ 201
+  2. Оплатить заказ суммой больше остатка на счёте
+  3. Ожидаемый результат: ответ 422, в ответе код ошибки `INSUFFICIENT_FUNDS` (пример ответа: `{"code": "INSUFFICIENT_FUNDS", "message": "...", "trace_id": "..."}`)
 
 - Выход:
   ```python
-  @pytest.mark.zephyr("PROJ-T100")
-  @allure.title("Вызов навыка hockey_news в режиме стриминга")
-  @pytest.mark.parametrize("user", ["user_1"], indirect=True)
-  def test_stream_calls_hockey_news(self, get_thread_id, runs_api):
-      thread_id = get_thread_id  # шаг 1 кейса закрыт фикстурой контура
+  @allure.title("Оплата заказа при недостатке средств")
+  def test_pay_order_insufficient_funds(self, created_order, orders_api):
+      order_id = created_order  # шаг 1 кейса закрыт фикстурой контура (Fidelity, п.10)
 
       with allure.step("Подготовим данные для запроса"):
-          request = build_run_request("расскажи новости хоккея", DEFAULT_CONFIG)
+          request = build_payment_request(order_id=order_id, amount=OVER_BALANCE_AMOUNT)
 
       with allure.step("Выполняем запрос"):
-          stream = runs_api.create_stream(thread_id, request)
+          response = orders_api.pay(request, raise_for_status=False)
 
-      with allure.step("Проверим, что в ответе есть события"):
-          assert stream.events, "Поток пустой"
-
-      with allure.step("Проверим, что навык hockey_news вызван"):
-          tool_call = stream.find_tool_call("hockey_news")
-          assert tool_call is not None, f"Нет вызова hockey_news. События: {[e.event for e in stream.events]}"
+      with allure.step("Проверим, что вернулась ошибка 422 с кодом INSUFFICIENT_FUNDS"):
+          assert response.status_code == 422, f"Ожидали 422, получили {response.status_code}"
+          assert response.json()["code"] == "INSUFFICIENT_FUNDS"
   ```
 
   Что здесь важно:
-  - проверок ровно две — по двум ожидаемым результатам кейса; поля из примера ответа (`selected_tools`, `todos`, `run_id`) не проверяются;
-  - вызов навыка проверяется через `find_tool_call` (фактический вызов), а не поиском имени в тексте ответа;
-  - маркер, параметризация пользователя и хелперы стрима взяты из контура, а не придуманы.
+  - проверено ровно то, что сказано в ожидаемом результате; `message` и `trace_id` из примера ответа не проверяются;
+  - ожидаемая ошибка проверяется на ответе, без исключения, потому что так умеет клиент контура;
+  - маркера нет, потому что в контуре его нет; фикстура и билдер — из контура, а не придуманы.
 
 ### 📥 Работа с OpenAPI-спецификацией
 ## Как агент определяет, какие компоненты использовать

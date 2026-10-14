@@ -84,9 +84,8 @@ class ResourceClient:
         POST /<resource_path>/{id}/<stream_action> с ответом text/event-stream.
         Возвращает SSEStream (status_code, events, events_by_type, last, find).
 
-        Хелперы под формат событий своего API (например find_tool_call —
-        поиск фактического вызова инструмента) добавляй здесь или в helpers/,
-        поверх SSEStream.find(...).
+        Хелперы под формат событий своего API (поиск события нужного типа,
+        финальное состояние) добавляй здесь или в helpers/, поверх SSEStream.find(...).
 
         # ACTIVE-код после наследования:
         # return self.stream_request("POST", f"{self._resource_path}/{resource_id}/<stream_action>",
