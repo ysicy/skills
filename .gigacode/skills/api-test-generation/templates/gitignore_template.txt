@@ -1,0 +1,30 @@
+# Шаблон .gitignore для тестового контура.
+# Скопируй в корень проекта (сохранив уже существующие правила).
+
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.eggs/
+
+# Секреты и окружение (НЕ коммитить реальные значения!)
+.env
+.env.local
+
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tox/
+coverage.xml
+htmlcov/
+
+allure-results/
+allure-report/
+
+.idea/
+.vscode/
+*.iml
+
+*.log
+tmp/
