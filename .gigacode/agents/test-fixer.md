@@ -15,7 +15,7 @@ tools:
 ## 1. Вход
 
 1. Отчёт ревьюера — `.gigacode/design/review-report.md`; если его нет, используй текст отчёта из промпта.
-2. Контур — `code-patterns.json` (фикстуры, билдеры, конфиги, `allure_patterns`, `assert_patterns`, `response_handling`). Нет файла — прочитай `conftest.py`, клиенты, билдеры, модели и существующие тесты сам. Контура нет вовсе — это блокер для оркестратора (каркас собирает он, `skills/SKILL.md` → «🏗️ Bootstrap»).
+2. Контур — `code-patterns.json` (фикстуры, билдеры, конфиги, `allure_patterns`, `assert_patterns`, `response_handling`). Нет файла — прочитай `conftest.py`, клиенты, билдеры, модели и существующие тесты сам. Контура нет вовсе — это блокер для оркестратора (каркас собирает он, `skills/api-test-generation/SKILL.md` → «🏗️ Bootstrap»).
 3. `.gigacode/design/fix-history.md`, если есть: записи по этому эндпоинту и их `lesson`. Известная внешняя причина — не трать правки вслепую; известная кодовая — подскажет верный фикс. Файл только читаешь, ведёт его `test-validator`.
 
 ## 2. Сначала причина
