@@ -5,7 +5,8 @@
 1. Использование фикстур (api_client, get_resource_id, user)
 2. Использование билдеров для создания запросов
 3. Три обязательных шага: подготовка, запрос, проверка
-4. Проверка response is not None перед проверками
+4. Проверки — ровно по ожидаемым результатам кейса (guard `is not None` — только
+   перед обращением к полю объекта, который может отсутствовать)
 5. Поиск сообщений в ответе через list comprehension
 6. Проверка AI-ответов на наличие ключевых фраз
 
@@ -99,12 +100,11 @@ class TestNegativeScenarios:
     @allure.title("Ошибка при невалидном запросе")
     def test_invalid_request(self, api_client):
         """Ожидаемый результат: невалидный запрос возвращает ошибку."""
-        # Пример (ACTIVE):
+        # Пример (ACTIVE): статус ошибки проверяется на ответе, без pytest.raises
         # with allure.step("Подготовим невалидные данные"):
         #     invalid_request = {"invalid_field": "value"}
-        # with allure.step("Выполним запрос в ожидании ошибки"):
-        #     with pytest.raises(Exception) as exc_info:
-        #         api_client.send(invalid_request)
-        # with allure.step("Проверим код ошибки"):
-        #     assert getattr(exc_info.value, "status_code", None) == 400
+        # with allure.step("Выполним запрос"):
+        #     response = api_client.create_raw(invalid_request)  # raise_for_status=False
+        # with allure.step("Проверим, что вернулась ошибка 400"):
+        #     assert response.status_code == 400, f"Ожидали 400, получили {response.status_code}"
         _not_implemented()

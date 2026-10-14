@@ -55,7 +55,7 @@ tools:
 
 Перед записью теста **ОБЯЗАТЕЛЬНО** определи фактическое состояние целевого файла:
 
-1. **Файл `<test_root>/test_<feature>.py` СУЩЕСТВУЕТ** (проверь через `glob`/`read_file`/`grep`):
+1. **Файл `<test_suites>/test_<feature>.py` СУЩЕСТВУЕТ** (проверь через `glob`/`read_file`/`grep`):
     - **НЕ ПЕРЕЗАПИСЫВАЙ файл целиком через `write_file`. ЗАПРЕЩЕНО.**
     - Добавляй/изменяй **ТОЧЕЧНО через `edit`**: вставь новый тест-метод в конец подходящего класса, НЕ трогая существующие методы, константы, декораторы, импорты и пустые строки.
     - **Никогда не создавай заново существующий файл «из чистого листа»**: любые правки/удаления других тестов — ЗАПРЕЩЕНЫ без явного подтверждения пользователя.
@@ -96,11 +96,12 @@ tools:
 - **Шаг теста = только `with allure.step(...)`, без дополнительных комментариев.** НЕ добавляй в тело теста текстовые комментарии/заголовки вида `# ── 1. ... ──...` или `# ====...====` — `allure.step` уже является «комментарием к шагу», а лог запроса/ответа делает HTTP-клиент (см. `common-principles.md` → «Принципы генерации кода» → «Шаг теста = allure.step»).
 
 ### 5. Проверки и валидация
-- Обязательная проверка: `response is not None`
-- Обязательная проверка: проверка наличия ожидаемых полей
-- Бизнес-проверки: `in`/`not in` для списков, `==` для значений
-- Используй паттерны проверок из `code-patterns.json`
-- Не проверяй структуру ответа (она валидируется через Pydantic), но если пользователь попросит добавить проверки по полям — допиши их
+- **Источник проверок — только ожидаемые результаты тест-кейса** (Test Case Fidelity). Обязательных проверок «по умолчанию» нет: ни `response is not None`, ни «наличие ожидаемых полей», ни статус-код, если их нет в кейсе.
+- **Технический guard допустим** (`common-principles.md` → Test Case Fidelity, п.9): если проверка из кейса обращается к объекту, который может отсутствовать (`final.suggestions` при `final is None`), перед ней можно поставить `assert <объект> is not None, "<понятное сообщение>"` в том же шаге. Это не новая проверка, а защита от `AttributeError` вместо понятного падения.
+- **Пример ответа в кейсе — не список проверок.** Проверяй только то, что сформулировано в ожидаемом результате словами («навык вызван», «suggestions не пустой», «статус 200»). Конкретные значения из примера (id, даты, текст LLM) не переноси в assert'ы.
+- **Где искать значение — по смыслу, а не по подстроке.** «Навык вызван» проверяется по полю вызова (`tool_calls[*].name` / событие вызова инструмента в формате потока проекта), а не поиском имени по всему тексту ответа: имя может присутствовать в списках кандидатов (`selected_tools` и т.п.) без фактического вызова. Если по контуру и кейсу непонятно, какое поле означает факт проверки, — это `requires_operator_input`, а не догадка.
+- Стиль проверок (`==`, `in`/`not in`, через модель или через хелпер стрима, сообщения в assert'ах) бери из `code-patterns.json` → `assert_patterns`.
+- **Статус ответа без исключения.** Если кейс ожидает 4xx/5xx, получай ответ так, чтобы статус был доступен для проверки (`expect_status=...` / `raise_for_status=False` у клиента проекта); `pytest.raises` — только если так принято в контуре.
 
 ### 6. Данные и конфигурация
 - Используй конфиги из `code-patterns.json`
@@ -111,51 +112,35 @@ tools:
 
 ## 📊 **Формат результата**
 
-Сохрани результат в `<test_root>/test_<feature>.py`.
+Сохрани результат в `<test_suites>/test_<feature>.py`.
 
 **Адаптируй структуру под паттерны из `code-patterns.json`:**
 
 ```
-import pytest
 import allure
-# Импорты бери из code-patterns.json (билдеры, конфиги, модели)
-# Пример универсального импорта:
-# from <test_root>.config import DEFAULT_CONFIG
-# from <test_root>.utils.builders import build_request
+import pytest
+# Импорты бери из code-patterns.json (билдеры, конфиги, клиенты, модели)
 
 
 @allure.feature("<название фичи>")
 @allure.story("<название эндпоинта>")
 class Test<FeatureName>:
-    """
-    Тесты для <описание фичи>.
-    """
 
-    @allure.title("<описание сценария>")
-    @pytest.mark.smoke  # для позитивных сценариев
-    @pytest.mark.regression
-    # Используй параметризацию из code-patterns.json если есть
-    def test_<описание_сценария>(
-        self,
-        # Используй фикстуры из code-patterns.json
-        api_client,  # название из code-patterns.json
-        get_resource_id,  # название из code-patterns.json
-        user  # если есть
-    ):
-        resource_id = get_resource_id()
+    <маркер интеграции из контура, если он есть: например @pytest.mark.zephyr("<CASE_KEY>")>
+    @allure.title("<название тест-кейса>")
+    <параметризация пользователя из контура, если она есть>
+    def test_<описание_сценария>(self, <фикстуры из code-patterns.json>):
+        <получение значений из фикстур>
 
-        with allure.step("Подготовим данные для запроса"):
-            # Используй билдер из code-patterns.json
-            request = build_request("текст запроса из кейса", DEFAULT_CONFIG)
+        with allure.step("<шаг кейса: подготовка данных>"):  # только если есть что готовить
+            request = <билдер из контура>(<данные из кейса>)
 
-        with allure.step("Выполняем запрос"):
-            # Используй клиент из code-patterns.json
-            response = api_client.execute(resource_id, request)
+        with allure.step("<шаг кейса: запрос>"):
+            response = <клиент из контура>.<метод>(request)
 
-        with allure.step("Проверим результат"):
-            assert response is not None
-            # Проверки из code-patterns.json и из кейса
-            assert response.status_code == 200
+        # Один allure.step на каждый ожидаемый результат кейса, в порядке кейса
+        with allure.step("<ожидаемый результат кейса №1>"):
+            assert <проверка ровно этого результата>, "<понятное сообщение>"
 ```
 ### 🧠 Принципы генерации
 
@@ -190,57 +175,49 @@ class Test<FeatureName>:
 См. `common-principles.md` → "Критерии качества → Генерация (test-generator)".
 
 ### 📎 Пример работы (адаптивный)
-- Вход: code-patterns.json:
+- Вход: code-patterns.json (фрагмент):
+  ```json
   {
-  "fixtures": ["api_client", "get_resource_id", "user"],
-  "builders": ["build_request"],
-  "configs": ["DEFAULT_CONFIG"],
-  "allure_patterns": {
-  "step_templates": [
-  "Подготовим данные для запроса",
-  "Выполняем запрос",
-  "Проверим результат"
-  ]
-  },
-  "assert_patterns": [
-  "assert response is not None",
-  "assert response.status_code == 200"
-  ]
+    "fixtures": [{"name": "get_thread_id"}, {"name": "runs_api"}, {"name": "user", "parametrize": "indirect"}],
+    "builders": [{"name": "build_run_request", "parameters": ["content", "config"]}],
+    "markers": {"integration": "@pytest.mark.zephyr(\"<CASE_KEY>\")"},
+    "response_handling": {"stream": "runs_api.create_stream(...) -> объект с events, find_tool_call(name), final_values()"},
+    "assert_patterns": ["assert <объект>, \"<сообщение>\"", "assert x is not None, \"<сообщение с контекстом>\""]
   }
+  ```
 
-- Вход: test-cases.md:
-### TC-001: Создание ресурса
-- **Given:** Пользователь авторизован
-- **When:** POST /api/v1/resources с валидным payload
-- **Then:** Статус 201, ресурс создан
+- Вход: тест-кейс PROJ-T100
+  1. Создать тред → ответ 200
+  2. POST /threads/{thread_id}/runs/stream, content = «расскажи новости хоккея»
+  3. Ожидаемый результат: в ответе есть события
+  4. Ожидаемый результат: навык `hockey_news` вызван (пример ответа приложен)
 
-- Выход: готовый тест
+- Выход:
+  ```python
+  @pytest.mark.zephyr("PROJ-T100")
+  @allure.title("Вызов навыка hockey_news в режиме стриминга")
+  @pytest.mark.parametrize("user", ["user_1"], indirect=True)
+  def test_stream_calls_hockey_news(self, get_thread_id, runs_api):
+      thread_id = get_thread_id  # шаг 1 кейса закрыт фикстурой контура
 
-import pytest
-import allure
-from <test_root>.utils.builders import build_request
-from <test_root>.config import DEFAULT_CONFIG
+      with allure.step("Подготовим данные для запроса"):
+          request = build_run_request("расскажи новости хоккея", DEFAULT_CONFIG)
 
-@allure.feature("Ресурсы")
-@allure.story("Создание ресурса")
-class TestResources:
+      with allure.step("Выполняем запрос"):
+          stream = runs_api.create_stream(thread_id, request)
 
-    @allure.title("Создание ресурса авторизованным пользователем")
-    @pytest.mark.smoke
-    @pytest.mark.regression
-    def test_create_resource(self, api_client, get_resource_id, user):
-        resource_id = get_resource_id()
+      with allure.step("Проверим, что в ответе есть события"):
+          assert stream.events, "Поток пустой"
 
-        with allure.step("Подготовим данные для запроса"):
-            request = build_request("создать ресурс", DEFAULT_CONFIG)
+      with allure.step("Проверим, что навык hockey_news вызван"):
+          tool_call = stream.find_tool_call("hockey_news")
+          assert tool_call is not None, f"Нет вызова hockey_news. События: {[e.event for e in stream.events]}"
+  ```
 
-        with allure.step("Выполняем запрос"):
-            response = api_client.post("/api/v1/resources", json=request)
-
-        with allure.step("Проверим результат"):
-            assert response is not None
-            assert response.status_code == 201
-            assert response.json().get("id") is not None
+  Что здесь важно:
+  - проверок ровно две — по двум ожидаемым результатам кейса; поля из примера ответа (`selected_tools`, `todos`, `run_id`) не проверяются;
+  - вызов навыка проверяется через `find_tool_call` (фактический вызов), а не поиском имени в тексте ответа;
+  - маркер, параметризация пользователя и хелперы стрима взяты из контура, а не придуманы.
 
 ### 📥 Работа с OpenAPI-спецификацией
 ## Как агент определяет, какие компоненты использовать
