@@ -9,8 +9,9 @@
 - Клиент НЕ содержит проверок (это прерогатива тестов).
 - Все запросы идут через `self._send_request` базового HttpClient
   (там Allure-аттачи + Pydantic-валидация).
-- Для операций, которые могут падать из-за нестабильности, используй обёртку
-  `self._request` (с ретраями) вместо прямого `_send_request`.
+- Повторы при временных сбоях — через `self._request(..., retries=N)` и только для
+  идемпотентных методов (GET, PUT, DELETE). POST/PATCH не повторяй: повтор может
+  создать дубль. Негативные запросы (`raise_for_status=False`) не повторяются.
 
 Как использовать:
 1. Этот файл синтаксически валиден сам по себе (без реального HttpClient),
@@ -56,14 +57,31 @@ class ResourceClient:
     def get(self, resource_id: str) -> Optional[Dict[str, Any]]:
         """
         GET /<resource_path>/{id}
-        Возвращает сущность по идентификатору.
+        Возвращает сущность по идентификатору. GET идемпотентен — повторы безопасны.
+
+        # ACTIVE-код после наследования:
+        # return self._request("GET", f"{self._resource_path}/{resource_id}",
+        #                      step_title="Получение ресурса",
+        #                      expected_model=<ResponseDto>, retries=2)
         """
-        self._not_implemented()
+        return self._not_implemented()
+
+    def delete(self, resource_id: str) -> Any:
+        """
+        DELETE /<resource_path>/{id}
+        Удаляет сущность — используется в teardown фикстур (conftest.py).
+        Без исключения на 4xx: сущность могли уже удалить в самом тесте.
+
+        # ACTIVE-код после наследования:
+        # return self._send_request("DELETE", f"{self._resource_path}/{resource_id}",
+        #                            step_title="Удаление ресурса", raise_for_status=False)
+        """
+        return self._not_implemented()
 
     def execute(self, resource_id: str, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         POST /<resource_path>/{id}/<action>
-        Пример команды над ресурсом. Обёрнута в _request — включает ретраи.
+        Пример команды над ресурсом. Это POST — без повторов, через _send_request.
         """
         self._not_implemented()
 

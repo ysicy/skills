@@ -75,14 +75,21 @@ def api_client(base_url, user):
 @pytest.fixture(scope="function")
 def get_resource_id(api_client):
     """
-    Создаёт ресурс и возвращает его идентификатор.
+    Создаёт ресурс, отдаёт его идентификатор тесту и удаляет после теста.
+
+    Фикстура, которая создаёт данные на стенде, обязана их убрать: иначе
+    мусор копится с каждым прогоном, а повторный запуск видит чужие данные
+    (принцип независимости и идемпотентности теста). Удаление — после
+    `yield`, оно выполнится и при упавшем тесте. Если API не умеет удалять
+    сущность — напиши об этом в docstring фикстуры, а не молча оставляй данные.
 
     # ACTIVE-заглушка ниже; после создания модели:
     #     create_request = <RequestDto>(metadata={}, initial_state={})
     #     resource = api_client.create(create_request)
-    #     return resource.id
+    #     yield resource.id
+    #     api_client.delete(resource.id)  # без исключения: тест мог удалить сам
     """
     raise NotImplementedError(
-        "get_resource_id ещё не подключён к реальному ресурсу."
+        "get_resource_id ещё не подключён к реальному ресурсу. "
         "Собери каркас по README."
     )
