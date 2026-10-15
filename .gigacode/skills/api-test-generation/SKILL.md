@@ -47,6 +47,7 @@ description: Python-скилл генерации API-тестов (pytest/Allur
 - Перед повторным запуском агента (после обрыва связи, ошибки, пустого ответа) убедись, что прежний вызов не работает: от него пришёл `task-notification` или ошибка. Иначе дождись его — второй экземпляр того же агента не запускай.
 - Fixer'у передавай путь к `review-report.md`: он читает отчёт с диска.
 - В промпт агентов добавляй указание прочитать `.gigacode/design/fix-history.md`, если он есть. Validator и fixer учитывают историю при диагностике; generator и designer — только как предупреждение, не как источник шагов.
+- В промпт validator'а передавай число циклов fixer и повторных запусков агентов в этом прогоне: из них он считает `cost_score`.
 - Передавай каждому агенту `<test_root>` и `<test_suites>` (`common-principles.md` → «`<test_root>` и `<test_suites>`»), определённые один раз в начале.
 - Примеры вызова: `agent(description: "Анализ паттернов проекта", prompt: "...", subagent_type: "code-pattern-matcher")`, аналогично для `requirements-analyst`, `test-case-designer`, `test-generator`, `test-reviewer`, `test-fixer`, `test-validator`.
 
