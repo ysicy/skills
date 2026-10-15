@@ -30,8 +30,15 @@ from pydantic import BaseModel, TypeAdapter, ValidationError
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
-# Фильтр «ретраить ли этот ответ/ошибку» (см. retry_filter)
-RetryFilter = Callable[[Optional[requests.Response], Optional[Exception]], bool]
+# Фильтр «повторять ли запрос»: (метод, исключение) -> bool (см. _default_retry_filter)
+RetryFilter = Callable[[str, Exception], bool]
+
+# Повторять можно только идемпотентные методы: повтор POST/PATCH может создать
+# сущность или применить изменение дважды, если первый запрос дошёл, а ответ потерялся.
+IDEMPOTENT_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "PUT", "DELETE"})
+# Временная недоступность шлюза/сервиса. 500 сюда не входит: это ошибка сервера,
+# которую тест должен увидеть, а не спрятать повтором.
+RETRYABLE_STATUSES = frozenset({502, 503, 504})
 
 
 # 1. Модель потокового ответа (Server-Sent Events)
@@ -136,7 +143,8 @@ class HttpClient:
         key_path: Путь к файлу приватного ключа (.key) — для mTLS
         token: Bearer-токен для авторизации
         timeout: Таймаут запроса в секундах (по умолчанию 60)
-        retries: Количество повторов при сбоях (по умолчанию 0)
+        retries: Количество повторов при временных сбоях (по умолчанию 0 — без повторов).
+            Повторяются только идемпотентные методы и только сетевые ошибки и 502/503/504.
         retry_backoff: Базовая задержка ретраев в сек (экспоненциальный рост)
         verify: Проверка TLS-сертификата сервера. True — проверять (безопасно).
             False — отключать (только для тестовых стендов за MITM/прокси).
@@ -195,13 +203,21 @@ class HttpClient:
     # Политика ретраев
     # ------------------------------------------------------------
     @staticmethod
-    def _default_retry_filter(response, exc) -> bool:
-        """Ретраим сетевые ошибки и 5xx (нестабильность сервера)."""
-        if exc is not None:
-            return True
-        if response is None:
-            return True
-        return response.status_code >= 500
+    def _default_retry_filter(method: str, exc: Exception) -> bool:
+        """
+        Повторяем только временные сбои и только идемпотентные методы.
+
+        - POST/PATCH — никогда: повтор может создать дубль.
+        - Сетевые сбои (обрыв соединения, таймаут) и 502/503/504 — да.
+        - 4xx, 500 и ошибки валидации модели — никогда: это результат, который
+          должен увидеть тест, а не нестабильность, которую можно переждать.
+        """
+        if method.upper() not in IDEMPOTENT_METHODS:
+            return False
+        if isinstance(exc, requests.exceptions.HTTPError):
+            response = exc.response
+            return response is not None and response.status_code in RETRYABLE_STATUSES
+        return isinstance(exc, (requests.exceptions.ConnectionError, requests.exceptions.Timeout))
 
     # ------------------------------------------------------------
     # Центральный метод отправки (с ретраями)
@@ -223,6 +239,8 @@ class HttpClient:
 
         Аттачи и логирование — внутри _send_request. Здесь — цикл повторов:
         повторяем, пока срабатывает retry_filter и не исчерпаны попытки.
+        При raise_for_status=False (тест ждёт ошибку) повторов нет: ответ
+        возвращается тесту как есть, с первой попытки.
 
         Args:
             method: HTTP-метод
@@ -231,7 +249,7 @@ class HttpClient:
             expected_model: Pydantic-модель для валидации ответа
             timeout: Таймаут (перекрывает дефолт конструктора)
             retries: Число повторов (перекрывает дефолт конструктора)
-            retry_filter: Кастомный фильтр (response, exc) -> стоит ли ретраить
+            retry_filter: Кастомный фильтр (method, exc) -> стоит ли повторять
             raise_for_status: False — не бросать исключение на 4xx/5xx (см. _send_request)
             **kwargs: Аргументы requests (json, params, headers и т.д.)
         """
@@ -251,7 +269,7 @@ class HttpClient:
                     "Попытка %d/%d не удалась (%s %s): %s",
                     attempt + 1, retries + 1, method, path, exc,
                 )
-                if attempt < retries and retry_filter(None, exc):
+                if attempt < retries and raise_for_status and retry_filter(method, exc):
                     time.sleep(self.retry_backoff * (2 ** attempt))
                     continue
                 raise
