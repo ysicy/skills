@@ -32,7 +32,7 @@ tools:
 | Ошибка | Что делать |
 |---|---|
 | `SyntaxError`, `IndentationError` | исправить синтаксис |
-| `fixture 'x' not found` | проверить фикстуру в `conftest.py` |
+| `fixture 'x' not found` | проверить фикстуру в `conftest.py`; если фикстура есть, а тест лежит вне каталога этого `conftest.py`, — тест не в `<test_suites>`: перенеси его туда (`common-principles.md` → «`<test_suites>` всегда внутри `<test_root>`») |
 | `ImportError`, `ModuleNotFoundError` | исправить импорт |
 | `ValidationError`, `TypeError` | сверить модели и типы |
 | `AssertionError`, `AttributeError` | пересмотреть логику проверки (не ослабляя её) |

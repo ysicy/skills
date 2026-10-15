@@ -15,6 +15,8 @@ tools:
 
 ## 1. Контур проекта
 
+`<test_root>` и `<test_suites>` берёшь из промпта оркестратора; они важнее `project_context.test_root` в `code-patterns.json`. Тест-файл пишешь только в `<test_suites>`, модели, клиенты и билдеры — в каталоги внутри `<test_root>`.
+
 Источник компонентов — `.gigacode/design/code-patterns.json`. Если его нет, собери то же сам:
 1. найди `<test_root>` и `<test_suites>` (`common-principles.md` → «`<test_root>` и `<test_suites>`»);
 2. `conftest.py` → фикстуры (base URL, клиенты, создание сущностей, пользователь);
