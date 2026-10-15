@@ -1,9 +1,3 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{TITLE}}</title>
 <style>
 :root{--bg:#0f1420;--panel:#161c2b;--panel2:#1c2436;--line:#27304a;--txt:#e6ebf4;--dim:#8b94ad;--green:#34d399;--red:#f87171;--amber:#fbbf24;--blue:#60a5fa;--violet:#a78bfa}
 *{box-sizing:border-box}
@@ -65,35 +59,17 @@ tr:last-child td{border-bottom:none}
 .tl-dot{width:10px;height:10px;border-radius:50%;margin-top:5px;flex:0 0 auto}
 .l-g{background:var(--green)}.l-o{background:var(--amber)}.l-b{background:var(--blue)}
  @media(max-width:760px){.gates{grid-template-columns:repeat(2,1fr)}.row-grid{grid-template-columns:1fr 1fr}}
-</style>
-</head>
-<body>
-<!--
-  ВАЖНО (публикация сводного отчёта как Artifact):
-  Этот шаблон открывается двумя способами:
-  1) как ПОЛНАЯ HTML-страница (обернута <head>/<body>, используется напрямую) —
-     тогда глобальные стили :root/body берутся из <style> во <head>;
-  2) как body-only ФРАГМЕНТ для Artifact-публикации — тогда клиент берёт только
-     содержимое <body> и оборачивает в свою страницу, НЕ подтягивая <head>.
-  Чтобы в обоих случаях отчёт открывался с первого раза и с ТЁМНЫМ фоном
-  (даже если клиент не переносит стили из <head>), ниже в начале <body>
-  продублирован САМОДОСТАТОЧНЫЙ блок глобальных стилей (:root + * + body).
-  НЕ УДАЛЯЙТЕ его при генерации — иначе body-фрагмент для Artifact потеряет
-  фон и тёмную тему (прошлая ошибка: artifact открывался на белом фоне).
-
-  При публикации отчёта как Artifact ВСЕГДА слать только body-фрагмент
-  (HTML внутри <body>, с этим <style>-блоком и <script>), а НЕ полный документ.
--->
-<style>
-:root{--bg:#0f1420;--panel:#161c2b;--panel2:#1c2436;--line:#27304a;--txt:#e6ebf4;--dim:#8b94ad;--green:#34d399;--red:#f87171;--amber:#fbbf24;--blue:#60a5fa;--violet:#a78bfa}
-*{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(160deg,#0b0f1a,#131a2b 55%,#0b0f1a);color:var(--txt);line-height:1.5}
 html{color-scheme:dark}
 </style>
 <!--
   КАНОНИЧЕСКИЙ ШАБЛОН СВОДНОГО HTML-ОТЧЁТА (полная ширина, детальные вкладки).
   Структура повторяет эталон 1-в-1: контент на всю ширину экрана (без wrap),
   вкладки Сводка/Тесты/Карта TC→AC/Эндпоинты/Метрики/Блокеры/Уроки.
+
+  ФОРМАТ: шаблон — body-фрагмент. Без <!DOCTYPE>, <html>, <head>, <body> и без внешних
+  ссылок (шрифты, CDN, <link>): только этот <style>, разметка и <script>. В таком виде
+  файл публикуется как Artifact с первого раза и открывается в браузере как есть.
+  Не оборачивай его в полный документ и не добавляй внешние ресурсы.
 
   КАК ЗАПОЛНИТЬ (автозаполнение из артефактов — источник указан у каждой группы):
   При генерации сводного отчёта прочитайте артефакты контура ТЕКУЩЕГО проекта
@@ -104,7 +80,8 @@ html{color-scheme:dark}
   СПРАВОЧНИК: ПЛЕЙСХОЛДЕР → ИСТОЧНИК
   ------------------------------------------------------------------
   Сводные счётчики (гаты, подвал, Сводка, Метрики) — СУММАРНО ПО ВСЕМ ГРУППАМ:
-    {{TITLE}}            = «Дашборд сгенерированных API-тестов» + « · <scope>», из test-cases.md
+    {{TITLE}}            = «Дашборд сгенерированных API-тестов» + « · <scope>», из test-cases.md;
+                           в файл не вписывается — передаётся как title при публикации Artifact
     {{Σ_TC}}             = Σ TC по группам (складывать из test-cases.md / ревизий fix-history.md)
     {{Σ_passed}}         = Σ passed (report.json / вывод pytest — статусы passed)
     {{Σ_code_failed}}    = Σ code-failed (0 при чистом коде; иначе по fix-history.md)
@@ -464,5 +441,3 @@ html{color-scheme:dark}
   });
 })();
 </script>
-</body>
-</html>
