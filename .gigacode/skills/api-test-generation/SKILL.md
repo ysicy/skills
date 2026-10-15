@@ -49,6 +49,7 @@ description: Python-скилл генерации API-тестов (pytest/Allur
 - В промпт агентов добавляй указание прочитать `.gigacode/design/fix-history.md`, если он есть. Validator и fixer учитывают историю при диагностике; generator и designer — только как предупреждение, не как источник шагов.
 - Передавай каждому агенту `<test_root>` и `<test_suites>` (`common-principles.md` → «`<test_root>` и `<test_suites>`»), определённые один раз в начале.
 - Примеры вызова: `agent(description: "Анализ паттернов проекта", prompt: "...", subagent_type: "code-pattern-matcher")`, аналогично для `requirements-analyst`, `test-case-designer`, `test-generator`, `test-reviewer`, `test-fixer`, `test-validator`.
+- **Файлы скилла ищи по точному пути, а не поиском.** В проектах `.gigacode/` часто добавлен в `.gitignore`, и тогда `glob`, `list_directory` и `grep_search` его содержимого не видят: каталог выглядит пустым, хотя файлы на месте. Шаблоны (`.gigacode/skills/api-test-generation/templates/<имя>`), `.gigacode/tools/…` и артефакты `design/` открывай `read_file` по полному пути. Файла нет, только если `read_file` по точному пути вернул ошибку «не найден»; пустой результат поиска об этом ничего не говорит.
 
 ## 3. Автономность
 
