@@ -70,11 +70,11 @@ tools:
      "request": {"user_id": {"type": "int", "required": true}, "total": {"type": "float", "required": true, "min": 0}},
      "response": {"201": {"description": "Заказ создан", "schema": {"id": "int", "status": "str"}}, "401": {"description": "Не авторизован"}}}
   ],
-  "acceptance_criteria": [{"id": "AC-001", "description": "Создание заказа с валидными данными", "endpoint": "EP-001", "expected": "статус 201"}],
+  "acceptance_criteria": [{"id": "AC-001", "description": "Создание заказа с валидными данными", "endpoint": "EP-001", "expected": "статус 201", "in_scope": true}],
   "constraints": [{"id": "CN-001", "description": "<конфликт кейса и контура, если есть>"}]
 }
 ```
 
-Секция `test_case` заполняется только для источника A; `entities`/`endpoints` — по тому, что есть в источнике.
+Секция `test_case` заполняется только для источника A; `entities`/`endpoints` — по тому, что есть в источнике. Если оператор ограничил объём (методы, эндпоинты, число тестов), AC за его пределами всё равно записываются, но с `"in_scope": false`: так видно, что они есть, и покрытие не занижается.
 
 Шаг выполнен, только когда файл записан через `write_file` и прочитан обратно для проверки. Модель «в рассуждениях» без файла следующий агент не получит.
