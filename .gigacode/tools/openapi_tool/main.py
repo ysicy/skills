@@ -1,25 +1,36 @@
 """
 Основной модуль OpenAPI Tool.
 """
-from typing import Dict, Any, Optional, Set
+import sys
 from pathlib import Path
+from typing import Any, Dict, Optional, Set
 
-from .parser import OpenAPIParser
-from .generator import PydanticGenerator
-from .models import ParsedOpenAPI
+if __package__ in (None, ""):
+    # Запуск как скрипта: python .gigacode/tools/openapi_tool/main.py ...
+    # Относительные импорты работают только внутри пакета, поэтому подключаем пакет по пути.
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from openapi_tool.generator import PydanticGenerator
+    from openapi_tool.models import ParsedOpenAPI  # noqa: F401
+    from openapi_tool.parser import OpenAPIParser
+else:
+    from .generator import PydanticGenerator
+    from .models import ParsedOpenAPI  # noqa: F401
+    from .parser import OpenAPIParser
 
 
-def _read_existing_schemas(test_root: str) -> Set[str]:
+def _read_existing_schemas(models_dir: str, skip_file: Optional[str] = None) -> Set[str]:
     """
-    Читает существующие Pydantic-модели из <test_root>/models/
-    и возвращает набор имён классов.
+    Читает существующие Pydantic-модели из каталога моделей (output_dir)
+    и возвращает набор имён классов. Файл, который сейчас будет перезаписан, не учитывается.
     """
     existing = set()
-    models_path = Path(test_root) / "models"
+    models_path = Path(models_dir)
     if not models_path.exists():
         return existing
 
     for py_file in models_path.glob("*.py"):
+        if skip_file and py_file.name == skip_file:
+            continue
         try:
             content = py_file.read_text(encoding="utf-8")
             for line in content.splitlines():
@@ -36,15 +47,15 @@ def _read_existing_schemas(test_root: str) -> Set[str]:
 def _check_duplicate_schemas(
         new_schemas: list,
         output_dir: str,
-        test_root: str
+        skip_file: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Проверяет, какие DTO уже существуют в проекте.
 
     Args:
         new_schemas: список Schema из OpenAPI
-        output_dir: целевая директория
-        test_root: корень тестового дерева
+        output_dir: каталог моделей, в котором ищутся уже существующие классы
+        skip_file: файл, который будет перезаписан генерацией (не считается дубликатом)
 
     Returns:
         Dict с классификацией:
@@ -55,7 +66,7 @@ def _check_duplicate_schemas(
             "recommendation": "..."
         }
     """
-    existing = _read_existing_schemas(test_root)
+    existing = _read_existing_schemas(output_dir, skip_file)
 
     existing_schemas = []
     new_schemas_list = []
@@ -119,7 +130,7 @@ def parse_openapi(
     duplicate_result = None
     if check_duplicates and output_dir:
         duplicate_result = _check_duplicate_schemas(
-            parsed.schemas, output_dir, test_root=output_dir
+            parsed.schemas, output_dir, skip_file=output_filename
         )
         if duplicate_result.get("duplicates_detected"):
             if duplicate_action == "warn":
@@ -145,15 +156,11 @@ def parse_openapi(
         "version": parsed.version,
         "base_path": parsed.base_path,
         "schemas": [s.name for s in parsed.schemas],
-        "endpoints": [
-            {
-                "path": e.path,
-                "method": e.method,
-                "request_schema": e.request_schema,
-                "response_schema": e.response_schema
-            }
-            for e in parsed.endpoints
-        ],
+        "endpoints": [e.model_dump(exclude_none=True) for e in parsed.endpoints],
+        "enums": {
+            f"{s.name}.{f.name}": f.enum
+            for s in parsed.schemas for f in s.fields if f.enum
+        },
         "output_file": saved_path
     }
 
@@ -206,12 +213,11 @@ def _resolve_test_root() -> Optional[str]:
 
 def run_tool():
     """Точка входа для GigaCode CLI как инструмента."""
-    import sys
     import json
 
     if len(sys.argv) < 2:
         print("❌ Укажи путь к OpenAPI-спецификации")
-        print("Пример: python -m tools.openapi_tool.main docs/openapi.json")
+        print("Пример: python .gigacode/tools/openapi_tool/main.py docs/openapi.json tests/models")
         sys.exit(1)
 
     source = sys.argv[1]
@@ -227,7 +233,7 @@ def run_tool():
         else:
             print("❌ Не передан output_dir, а test_root не найден в .gigacode/design/code-patterns.json")
             print("Укажи путь вторым аргументом:")
-            print("  python -m tools.openapi_tool.main <spec_path> <output_dir>")
+            print("  python .gigacode/tools/openapi_tool/main.py <spec_path> <output_dir>")
             sys.exit(1)
 
     try:
