@@ -20,7 +20,7 @@
 code-pattern-matcher → requirements-analyst → test-case-designer → test-generator → test-reviewer → test-fixer → test-validator
 ```
 
-Итог: автотест в `<test_suites>/test_<feature>.py`, сводка прогона `.gigacode/design/report.json` и HTML-отчёт. Allure-отчёт не генерируется.
+Итог: автотест в `<test_suites>/test_<feature>.py`, сводка прогона `.gigacode/design/report.json` и накопительный дашборд `.gigacode/design/test-report.html`. Allure-отчёт не генерируется.
 
 ## Где лежат тесты
 
