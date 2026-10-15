@@ -38,7 +38,14 @@ python .gigacode/tools/report_tool/main.py build
       "note": "пояснение к статусу"
     }
   ],
-  "ac": {"total": 3, "covered": 3, "manual": []},
+  "ac": {
+    "items": [
+      {"id": "AC-001", "description": "В ответе есть события"},
+      {"id": "AC-002", "description": "В потоке сообщение «Не удалось получить настройки навыка»"},
+      {"id": "AC-003", "description": "Навык forward_custom_138 не вызывался"}
+    ],
+    "manual": []
+  },
   "pipeline": {
     "first_run_passed": false,
     "fixer_cycles": 0,
@@ -72,6 +79,7 @@ python .gigacode/tools/report_tool/main.py build
 }
 ```
 
+- `ac.items` — все AC из `requirements.json` для этого сьюта, включая непокрытые. Покрыт AC или нет, скрипт считает сам по `tests[].ac`; `manual` — AC, вынесенные на ручную проверку. Без `items` можно передать только числа `total`/`covered`, но тогда во вкладке «Карта AC» не будет видно, какие AC без теста.
 - `tests[].status` указывай только для `external` (известное расхождение стенда) и `manual` (вынесено на ручную проверку). Остальные статусы скрипт берёт из JUnit; тест, которого нет в JUnit, получит `missing`.
 - `stand_issues` и `case_remarks` копятся между прогонами: запись с тем же `id` (в группе) или с тем же `case_key` + `remark` обновляет прежнюю. Закрыл расхождение — пришли его снова со `status: closed`; поправил кейс — с `resolved: true`.
 - `tokens` — только реальное число из логов среды. Неизвестно — `null`, колонка в дашборде не появится.

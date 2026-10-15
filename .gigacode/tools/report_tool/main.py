@@ -203,7 +203,44 @@ def aggregate(runs: list[dict]) -> dict:
             remarks[key] = {**prev, **c, "first": prev.get("first", date)}
         for les in r.get("lessons") or []:
             lessons.setdefault(les, date)
+    for name, grp in groups.items():
+        grp["acmap"] = _ac_map(name, grp, tests)
     return {"tests": tests, "groups": groups, "issues": issues, "remarks": remarks, "lessons": lessons}
+
+
+def _ac_map(group: str, grp: dict, tests: dict) -> dict:
+    """Покрытие группы по каждому AC.
+
+    Есть список ac.items — статус каждого AC считается по текущим тестам группы:
+    covered — его проверяет хотя бы один тест, manual — вынесен на ручную проверку,
+    uncovered — не проверяет ничто. Списка нет — берутся числа total/covered из записи.
+    """
+    items: dict[str, dict] = {}
+    manual: set[str] = set()
+    tot = cov = 0
+    for ac in grp["ac"].values():
+        manual |= {str(x) for x in ac.get("manual") or []}
+        for it in ac.get("items") or []:
+            if it.get("id"):
+                items[str(it["id"])] = {"id": str(it["id"]), "description": it.get("description", "")}
+        if not ac.get("items"):
+            tot += int(ac.get("total") or 0)
+            cov += int(ac.get("covered") or 0)
+    by_ac: dict[str, list[str]] = {}
+    for t in tests.values():
+        if t["group"] != group:
+            continue
+        for a in t.get("ac") or []:
+            by_ac.setdefault(str(a), []).append(t.get("name", ""))
+    for a, it in items.items():
+        it["tests"] = sorted(by_ac.get(a, []))
+        it["status"] = "covered" if it["tests"] else ("manual" if a in manual else "uncovered")
+    listed = list(items.values())
+    tot += len(listed)
+    cov += sum(1 for it in listed if it["status"] == "covered")
+    return {"items": sorted(listed, key=lambda x: x["id"]), "total": tot, "covered": cov,
+            "manual": sorted(manual),
+            "uncovered": [it["id"] for it in listed if it["status"] == "uncovered"]}
 
 
 STATUS_BADGE = {
@@ -226,13 +263,10 @@ def render(runs: list[dict]) -> str:
     agg = aggregate(runs)
     tests = list(agg["tests"].values())
     by_status = {s: sum(1 for t in tests if t["status"] == s) for s in STATUS_BADGE}
-    ac_total = ac_cov = 0
-    manual_ac: list[str] = []
-    for grp in agg["groups"].values():
-        for ac in grp["ac"].values():
-            ac_total += int(ac.get("total") or 0)
-            ac_cov += int(ac.get("covered") or 0)
-            manual_ac += [str(x) for x in ac.get("manual") or []]
+    ac_total = sum(g["acmap"]["total"] for g in agg["groups"].values())
+    ac_cov = sum(g["acmap"]["covered"] for g in agg["groups"].values())
+    manual_ac = [m for g in agg["groups"].values() for m in g["acmap"]["manual"]]
+    uncovered_ac = sum(len(g["acmap"]["uncovered"]) for g in agg["groups"].values())
     endpoints = {(t.get("method"), t.get("path")) for t in tests if t.get("path")}
     duration = sum(float(t.get("duration") or 0) for t in tests)
     has_dur = any("duration" in t for t in tests)
@@ -252,7 +286,8 @@ def render(runs: list[dict]) -> str:
       f'<div class="s">{by_status["passed"]} passed · {by_status["failed"] + by_status["error"]} failed · '
       f'{by_status["external"]} внешних · {by_status["manual"]} ручных</div></div>')
     w(f'<div class="gate"><div class="k">Покрытие AC</div><div class="v">{ac_cov}/{ac_total}</div>'
-      f'<div class="s">{cov}{" · ручные: " + e(", ".join(manual_ac)) if manual_ac else ""}</div></div>')
+      f'<div class="s">{cov}{" · ручные: " + e(", ".join(manual_ac)) if manual_ac else ""}'
+      f'{" · не покрыто: " + str(uncovered_ac) if uncovered_ac else ""}</div></div>')
     w(f'<div class="gate"><div class="k">Длительность pytest</div><div class="v">'
       f'{_fmt_dur(duration) if has_dur else "—"}</div><div class="s">по JUnit, сумма последних прогонов</div></div>')
     w(f'<div class="gate"><div class="k">Открыто</div><div class="v">{len(open_issues)} / {len(open_remarks)}</div>'
@@ -260,8 +295,9 @@ def render(runs: list[dict]) -> str:
     w('</div>')
 
     panes = [
-        ("p-sum", "Сводка", _pane_summary(agg)),
+        ("p-sum", "Сводка", _pane_summary(agg, len(tests), ac_total, ac_cov, manual_ac, uncovered_ac)),
         ("p-tests", f"Тесты ({len(tests)})", _pane_tests(tests)),
+        ("p-ac", "Карта AC" + (f" ({uncovered_ac} без теста)" if uncovered_ac else ""), _pane_ac(agg["groups"])),
         ("p-remarks", f"Замечания к кейсам ({len(open_remarks)})", _pane_remarks(agg["remarks"])),
         ("p-stand", f"Расхождения стенда ({len(open_issues)})", _pane_stand(agg["issues"])),
         ("p-quality", "Качество генерации", _pane_quality(runs)),
@@ -304,21 +340,60 @@ def _table(head: list[str], rows: list[list[str]], num_cols: tuple = ()) -> str:
     return f'<div class="wrap-x"><table><tr>{th}</tr>{"".join(trs)}</table></div>'
 
 
-def _pane_summary(agg: dict) -> str:
+def _pane_summary(agg: dict, n_tests: int, ac_total: int, ac_cov: int,
+                  manual_ac: list[str], uncovered_ac: int) -> str:
     rows = []
     for name, grp in sorted(agg["groups"].items()):
         gt = [t for t in agg["tests"].values() if t["group"] == name]
         ok = sum(1 for t in gt if t["status"] == "passed")
         ext = sum(1 for t in gt if t["status"] == "external")
         bad = sum(1 for t in gt if t["status"] in ("failed", "error", "missing"))
-        tot = sum(int(a.get("total") or 0) for a in grp["ac"].values())
-        cov = sum(int(a.get("covered") or 0) for a in grp["ac"].values())
+        tot, cov = grp["acmap"]["total"], grp["acmap"]["covered"]
         rows.append([e(name), f'<span class="code">{e(", ".join(sorted(grp["suites"])))}</span>',
                      str(len(gt)), str(ok), str(bad), str(ext), f"{cov}/{tot}" if tot else "—",
                      e(grp.get("last", ""))])
-    return _card("Группы", "Текущее состояние: по каждому тесту берётся последний прогон.",
-                 _table(["Группа", "Сьют", "Тестов", "passed", "failed", "внешних", "AC", "Обновлено"],
-                        rows, (2, 3, 4, 5)))
+    groups = _card("Группы", "Текущее состояние: по каждому тесту берётся последний прогон.",
+                   _table(["Группа", "Сьют", "Тестов", "passed", "failed", "внешних", "AC", "Обновлено"],
+                          rows, (2, 3, 4, 5)))
+    rest = ac_total - ac_cov
+    tail = []
+    if manual_ac:
+        tail.append(f"{len(manual_ac)} вынесено на ручную проверку")
+    if uncovered_ac:
+        tail.append(f"{uncovered_ac} пока без теста")
+    explain = (
+        f"<p>Тестов — <b>{n_tests}</b>, критериев приёмки (AC) — <b>{ac_total}</b>, из них проверяются "
+        f"автотестами <b>{ac_cov}</b>{' (' + e(', '.join(tail)) + ')' if rest and tail else ''}.</p>"
+        "<p>Это разные величины. <b>Тест</b> — сценарий: отправить запрос и убедиться, что ответ такой-то. "
+        "<b>AC</b> — одно проверяемое правило из кейса или спецификации: «вернуть 404 на несуществующий id», "
+        "«навык вызван». Один тест может закрывать несколько AC, а одно AC — проверяться несколькими тестами. "
+        "Число тестов показывает объём работы, покрытие AC — насколько полно проверены требования. "
+        "Какие именно AC без теста — во вкладке «Карта AC».</p>")
+    return groups + _card("Тесты и критерии приёмки — не одно и то же", "", explain)
+
+
+def _pane_ac(groups: dict) -> str:
+    label = {"covered": ("pass", "покрыт"), "manual": ("manual", "ручная проверка"),
+             "uncovered": ("fail", "без теста")}
+    rows, numbers_only = [], []
+    order = {"uncovered": 0, "manual": 1, "covered": 2}
+    for name, grp in sorted(groups.items()):
+        m = grp["acmap"]
+        if not m["items"]:
+            if m["total"]:
+                numbers_only.append(f"{name}: {m['covered']}/{m['total']}")
+            continue
+        rows.append([e(f"{name} — {m['covered']}/{m['total']}")])
+        for it in sorted(m["items"], key=lambda x: (order[x["status"]], x["id"])):
+            cls, text = label[it["status"]]
+            tests = "<br>".join(f'<span class="code">{e(t)}</span>' for t in it["tests"]) or "—"
+            rows.append([e(it["id"]), e(it["description"]), tests, f'<span class="badge {cls}">{text}</span>'])
+    sub = "Каждый критерий приёмки и тесты, которые его проверяют. Сверху — AC без теста: это дыры в покрытии."
+    note = ""
+    if numbers_only:
+        note = ('<div class="muted" style="margin-top:10px">Без списка AC в записи (только числа): '
+                + e("; ".join(numbers_only)) + "</div>")
+    return _card("Карта покрытия AC", sub, _table(["AC", "Критерий", "Тесты", "Статус"], rows) + note)
 
 
 def _pane_tests(tests: list[dict]) -> str:
