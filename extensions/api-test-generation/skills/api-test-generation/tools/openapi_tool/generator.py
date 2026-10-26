@@ -1,3 +1,4 @@
+import ast
 import keyword
 import re
 from pathlib import Path
@@ -18,6 +19,8 @@ from pydantic import BaseModel, ConfigDict, Field
 def to_field_name(name: str) -> str:
     """Имя поля JSON → допустимый идентификатор Python (from → from_, x-request-id → x_request_id)."""
     cleaned = re.sub(r"\W", "_", name)
+    if cleaned and not cleaned.isidentifier():
+        cleaned = re.sub(r"[^0-9A-Za-z_]", "_", cleaned)
     if not cleaned or cleaned[0].isdigit():
         cleaned = f"field_{cleaned}"
     if keyword.iskeyword(cleaned) or cleaned in {"model_config", "model_fields", "schema", "json", "dict", "copy"}:
@@ -27,6 +30,53 @@ def to_field_name(name: str) -> str:
 
 def _referenced_names(type_str: str, known: set) -> set:
     return {tok for tok in re.findall(r"[A-Za-z_]\w*", type_str) if tok in known}
+
+
+def validate_generated(code: str) -> None:
+    """Проверяет, что в файле моделей только декларации, а не исполняемый код.
+
+    Текст спецификации (description, title, enum, имена) — недоверенный вход. Даже если
+    экранирование где-то пропустит его в код, такой файл не будет записан: допускаются
+    только импорты, классы моделей с докстрингом и аннотированными полями, псевдонимы
+    типов и вызовы `<Модель>.model_rebuild()`.
+    """
+    try:
+        tree = ast.parse(code)
+    except SyntaxError as exc:
+        raise ValueError(f"Сгенерированные модели не разбираются как Python: {exc}") from exc
+
+    def fail(node: ast.AST, what: str) -> None:
+        raise ValueError(f"Недопустимая конструкция в сгенерированных моделях (строка {node.lineno}): {what}")
+
+    for node in tree.body:
+        if isinstance(node, ast.ImportFrom):
+            continue
+        if isinstance(node, ast.ClassDef):
+            for item in node.body:
+                if isinstance(item, ast.Expr) and isinstance(item.value, ast.Constant) and isinstance(item.value.value, str):
+                    continue
+                if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+                    continue
+                if (isinstance(item, ast.Assign) and len(item.targets) == 1
+                        and isinstance(item.targets[0], ast.Name) and item.targets[0].id == "model_config"):
+                    continue
+                fail(item, type(item).__name__)
+            continue
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            continue
+        if (isinstance(node, ast.Expr) and isinstance(node.value, ast.Call) and not node.value.args
+                and isinstance(node.value.func, ast.Attribute) and node.value.func.attr == "model_rebuild"):
+            continue
+        fail(node, type(node).__name__)
+
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Lambda, ast.FunctionDef, ast.AsyncFunctionDef, ast.Import)):
+            fail(node, type(node).__name__)
+        if isinstance(node, ast.Call):
+            func = node.func
+            name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+            if name not in {"Field", "ConfigDict", "model_rebuild"}:
+                fail(node, f"вызов {name or type(func).__name__}")
 
 
 class PydanticGenerator:
@@ -43,8 +93,8 @@ class PydanticGenerator:
             HEADER,
             "",
             "# Сгенерировано из OpenAPI-спецификации",
-            f"# Title: {self.parsed.title}",
-            f"# Version: {self.parsed.version}",
+            f"# Title: {self._one_line(self.parsed.title)}",
+            f"# Version: {self._one_line(self.parsed.version)}",
             "",
         ]
         for schema in models:
@@ -57,7 +107,7 @@ class PydanticGenerator:
                 if schema.description:
                     lines.append(f"# {self._one_line(schema.description)}")
                 if schema.enum:
-                    lines.append(f"# enum: {schema.enum!r}")
+                    lines.append(f"# enum: {self._one_line(repr(schema.enum))}")
                 lines.append(f"{schema.name} = {schema.alias_type}")
             lines.append("")
 
@@ -67,10 +117,13 @@ class PydanticGenerator:
             for schema in models:
                 lines.append(f"{schema.name}.model_rebuild()")
         lines.append("")
-        return "\n".join(lines)
+        code = "\n".join(lines)
+        validate_generated(code)
+        return code
 
     @staticmethod
-    def _one_line(text: str) -> str:
+    def _one_line(text: object) -> str:
+        """Текст из спецификации → одна строка: в комментарий или repr он не принесёт перевод строки."""
         return " ".join(str(text).split())
 
     def _order_aliases(self, aliases: List[Schema]) -> List[Schema]:
@@ -129,7 +182,7 @@ class PydanticGenerator:
         if args:
             line += f" = Field({', '.join(args)})"
         if field.enum:
-            line += f"  # enum: {field.enum!r}"
+            line += f"  # enum: {self._one_line(repr(field.enum))}"
         return line
 
     def save_to_file(self, output_path: str) -> str:
