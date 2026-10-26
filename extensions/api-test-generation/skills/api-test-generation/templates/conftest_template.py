@@ -32,19 +32,28 @@ def _env_or_default(name: str, default: str) -> str:
     return os.environ.get(name, default)
 
 
+DEFAULT_BASE_URL = "<test_base_url>"
+
+
 def _checked_base_url(url: str) -> str:
     """Не даёт тестам (и токенам в их заголовках) уйти на случайный хост.
 
-    Допускаются только http/https. Если задан TEST_ALLOWED_HOSTS (хосты через
-    запятую), хост URL обязан быть в этом списке.
+    Допускаются только http/https и только разрешённые хосты: хост стенда по
+    умолчанию (DEFAULT_BASE_URL) и хосты из TEST_ALLOWED_HOSTS (через запятую).
+    Переопределить TEST_BASE_URL на другой хост можно, только добавив его в
+    TEST_ALLOWED_HOSTS — список закрыт по умолчанию.
     """
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or not parsed.hostname:
         raise ValueError(f"TEST_BASE_URL должен быть http(s)-адресом, получено: {url!r}")
     allowed = {h.strip().lower() for h in os.environ.get("TEST_ALLOWED_HOSTS", "").split(",") if h.strip()}
-    if allowed and parsed.hostname.lower() not in allowed:
+    default_host = urlparse(DEFAULT_BASE_URL).hostname
+    if default_host:
+        allowed.add(default_host.lower())
+    if parsed.hostname.lower() not in allowed:
         raise ValueError(
-            f"Хост {parsed.hostname!r} не входит в TEST_ALLOWED_HOSTS ({', '.join(sorted(allowed))})"
+            f"Хост {parsed.hostname!r} не разрешён; разрешены: {', '.join(sorted(allowed)) or 'нет'}. "
+            "Добавь его в TEST_ALLOWED_HOSTS"
         )
     return url
 
@@ -52,7 +61,7 @@ def _checked_base_url(url: str) -> str:
 @pytest.fixture(scope="session")
 def base_url() -> str:
     """Базовый URL API (переопределяется через TEST_BASE_URL)."""
-    return _checked_base_url(_env_or_default("TEST_BASE_URL", "<test_base_url>"))
+    return _checked_base_url(_env_or_default("TEST_BASE_URL", DEFAULT_BASE_URL))
 
 
 # 3. Тестовые пользователи

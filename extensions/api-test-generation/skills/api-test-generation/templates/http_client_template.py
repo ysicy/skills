@@ -19,6 +19,7 @@ HTTP-клиент — это обёртка над requests, которая:
 import json
 import logging
 import time
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable, List, Optional, Type, TypeVar, Union
 
@@ -192,9 +193,10 @@ class HttpClient:
 
         # Проверка TLS-сертификата сервера всегда включена. Для стенда с
         # внутренним или самоподписанным сертификатом передай путь к CA bundle.
-        if verify is False:
+        if not (verify is True or (isinstance(verify, str) and Path(verify).is_file())):
             raise ValueError(
-                "Отключать проверку TLS нельзя: передай в verify путь к CA bundle стенда"
+                "verify: только True или путь к существующему файлу CA bundle стенда; "
+                f"получено {verify!r}. Отключать проверку TLS нельзя"
             )
         self.session.verify = verify
 

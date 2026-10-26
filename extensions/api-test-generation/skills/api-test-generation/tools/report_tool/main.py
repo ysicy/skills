@@ -88,7 +88,15 @@ def validate(rec: dict) -> list[str]:
     for key in ("group", "suite", "tests"):
         if not rec.get(key):
             errors.append(f"нет обязательного поля «{key}»")
+    for key in ("tests", "stand_issues", "case_remarks"):
+        if key in rec and not isinstance(rec[key], list):
+            errors.append(f"«{key}» должен быть списком")
+    if errors:
+        return errors
     for i, t in enumerate(rec.get("tests") or []):
+        if not isinstance(t, dict):
+            errors.append(f"tests[{i}]: должен быть объектом")
+            continue
         if not t.get("name"):
             errors.append(f"tests[{i}]: нет «name» (имя тест-функции)")
         st = t.get("status")
