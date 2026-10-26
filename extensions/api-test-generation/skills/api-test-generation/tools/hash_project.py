@@ -25,7 +25,7 @@
     python "<skill_dir>/tools/hash_project.py" <project_root> spec.yaml
     python "<skill_dir>/tools/hash_project.py" --include-tests
 
-Вывод: одна строка — MD5-хэш.
+Вывод: одна строка — SHA-256-хэш (hex).
 """
 
 import argparse
@@ -85,27 +85,27 @@ def _read_spec(spec: str) -> Optional[bytes]:
 
 
 def compute_hash(root: Path, specs: Iterable[str] = (), include_tests: bool = False) -> str:
-    md5 = hashlib.md5()
+    digest = hashlib.sha256()
     for path in iter_contour_files(root, include_tests):
-        md5.update(path.relative_to(root).as_posix().encode("utf-8"))
-        md5.update(b"\0")
+        digest.update(path.relative_to(root).as_posix().encode("utf-8"))
+        digest.update(b"\0")
         try:
-            md5.update(_normalized(path.read_bytes()))
+            digest.update(_normalized(path.read_bytes()))
         except OSError:
-            md5.update(b"<unreadable>")
-        md5.update(b"\0")
+            digest.update(b"<unreadable>")
+        digest.update(b"\0")
     for spec in sorted(specs):
-        md5.update(f"spec:{spec}".encode("utf-8"))
-        md5.update(b"\0")
+        digest.update(f"spec:{spec}".encode("utf-8"))
+        digest.update(b"\0")
         content = _read_spec(spec)
         if content is not None:
-            md5.update(_normalized(content))
-        md5.update(b"\0")
-    return md5.hexdigest()
+            digest.update(_normalized(content))
+        digest.update(b"\0")
+    return digest.hexdigest()
 
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="MD5-хэш тестового контура для кэша code-patterns.json")
+    parser = argparse.ArgumentParser(description="SHA-256-хэш тестового контура для кэша code-patterns.json")
     parser.add_argument("paths", nargs="*",
                         help="[корень проекта] [спецификации...]. Первый аргумент — корень, "
                              "если это каталог; остальные (и первый, если это не каталог) — спецификации.")
