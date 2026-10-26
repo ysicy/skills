@@ -92,9 +92,6 @@ def parse_openapi(
         source: str,
         output_dir: Optional[str] = None,
         output_filename: str = "openapi_models.py",
-        headers: Optional[Dict[str, str]] = None,
-        cert: Optional[str] = None,
-        key: Optional[str] = None,
         check_duplicates: bool = True,
         duplicate_action: str = "warn"
 ) -> Dict[str, Any]:
@@ -102,12 +99,9 @@ def parse_openapi(
     Парсит OpenAPI-спецификацию и генерирует Pydantic-модели.
 
     Args:
-        source: Путь к файлу или URL OpenAPI-спецификации
+        source: Путь к локальному файлу OpenAPI-спецификации (.json/.yaml)
         output_dir: Директория для сохранения моделей (по умолчанию: None — спросить у пользователя или взять из code-patterns.json)
         output_filename: Имя файла с моделями
-        headers: Опциональные кастомные заголовки запроса (например авторизация)
-        cert: Путь к mTLS сертификату (.crt) для защищённых API
-        key: Путь к mTLS ключу (.key) для защищённых API
         check_duplicates: Если True — проверит существующие DTO перед генерацией (по умолчанию True)
         duplicate_action: Действие при обнаружении дубликатов:
             - "warn" (по умолчанию) — только предупреждение, генерирует все DTO
@@ -123,7 +117,7 @@ def parse_openapi(
         }
     """
 
-    parser = OpenAPIParser(source, headers=headers, cert=cert, key=key)
+    parser = OpenAPIParser(source)
     parsed = parser.parse()
 
     # Проверка дубликатов DTO
@@ -168,18 +162,6 @@ def parse_openapi(
         result["duplicate_check"] = duplicate_result
 
     return result
-
-
-def parse_openapi_from_url(
-        url: str,
-        output_dir: Optional[str] = None,
-        output_filename: str = "openapi_models.py",
-        headers: Optional[Dict[str, str]] = None,
-        cert: Optional[str] = None,
-        key: Optional[str] = None
-) -> Dict[str, Any]:
-    """Парсит OpenAPI по URL."""
-    return parse_openapi(url, output_dir, output_filename, headers=headers, cert=cert, key=key)
 
 
 def parse_openapi_from_file(

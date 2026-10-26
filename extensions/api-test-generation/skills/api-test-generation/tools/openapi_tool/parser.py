@@ -38,19 +38,14 @@ class OpenAPIParser:
     def __init__(
             self,
             source: str,
-            headers: Optional[Dict[str, str]] = None,
-            cert: Optional[str] = None,
-            key: Optional[str] = None,
     ):
         """
         Args:
-            source: путь к файлу или URL спецификации
-            headers: заголовки запроса за спецификацией (например авторизация)
-            cert, key: mTLS-сертификат и ключ для защищённых API
+            source: путь к локальному файлу спецификации (.json/.yaml).
+                Сеть инструмент не использует: спецификацию по ссылке
+                сначала сохраняют в файл.
         """
         self.source = source
-        self.headers = headers or {}
-        self.cert = (cert, key) if (cert and key) else None
         self.spec = self._load_spec()
         self._schemas_raw: Dict[str, Any] = self.spec.get("components", {}).get("schemas", {}) or {}
         self._class_names = self._build_class_names()
@@ -60,20 +55,10 @@ class OpenAPIParser:
     # ------------------------------------------------------------------
     def _load_spec(self) -> Dict[str, Any]:
         if self._is_url(self.source):
-            import requests
-
-            session = requests.Session()
-            if self.cert:
-                session.cert = self.cert
-            if self.headers:
-                session.headers.update(self.headers)
-            response = session.get(self.source, timeout=30)
-            response.raise_for_status()
-            text = response.text
-            try:
-                return json.loads(text)
-            except json.JSONDecodeError:
-                return yaml.safe_load(text)
+            raise ValueError(
+                "openapi_tool читает только локальные файлы: сохрани спецификацию "
+                f"по ссылке {self.source} в файл и передай путь к нему"
+            )
 
         path = Path(self.source)
         if not path.exists():

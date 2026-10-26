@@ -1,8 +1,11 @@
 ---
 name: api-test-generation
 description: >
-  Генерация API-автотестов на Python (pytest, Allure) по тест-кейсу Jira/Zephyr
-  или по спецификации OpenAPI/Swagger через пайплайн из 7 субагентов.
+  Генерирует API-автотесты на Python (pytest, Allure) по тест-кейсу Jira/Zephyr
+  или спецификации OpenAPI/Swagger в стиле тестового контура проекта: шаги и
+  проверки строго по кейсу, ревью, исправление и прогон. Активировать при запросах
+  "сгенерируй автотест по кейсу", "автоматизируй тест-кейс", "напиши API-тест",
+  "тесты по Swagger/OpenAPI", а также по команде /api-test-generation.
 ---
 
 # Оркестратор API Test Generation

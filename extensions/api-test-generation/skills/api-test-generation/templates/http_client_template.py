@@ -146,8 +146,9 @@ class HttpClient:
         retries: Количество повторов при временных сбоях (по умолчанию 0 — без повторов).
             Повторяются только идемпотентные методы и только сетевые ошибки и 502/503/504.
         retry_backoff: Базовая задержка ретраев в сек (экспоненциальный рост)
-        verify: Проверка TLS-сертификата сервера. True — проверять (безопасно).
-            False — отключать (только для тестовых стендов за MITM/прокси).
+        verify: Проверка TLS-сертификата сервера: True — по системным корневым
+            сертификатам, строка — путь к CA bundle стенда (для внутреннего или
+            самоподписанного сертификата). Отключить проверку нельзя.
         **headers: Произвольные кастомные заголовки (x_*).
     """
 
@@ -160,7 +161,7 @@ class HttpClient:
             timeout: int = 60,
             retries: int = 0,
             retry_backoff: float = 0.5,
-            verify: bool = True,
+            verify: Union[bool, str] = True,
             **headers: Optional[str],
     ):
         base_url = (base_url or "").strip()
@@ -189,13 +190,13 @@ class HttpClient:
             self.session.cert = (cert_path, key_path)
             logger.info("mTLS настроен: cert=%s, key=%s", cert_path, key_path)
 
-        # Проверка TLS-сертификата сервера. Для тестовых стендов за
-        # MITM/прокси с самоподписанным сертификатом укажи verify=False.
+        # Проверка TLS-сертификата сервера всегда включена. Для стенда с
+        # внутренним или самоподписанным сертификатом передай путь к CA bundle.
+        if verify is False:
+            raise ValueError(
+                "Отключать проверку TLS нельзя: передай в verify путь к CA bundle стенда"
+            )
         self.session.verify = verify
-        if not verify:
-            import urllib3
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            logger.warning("Проверка TLS-сертификата ОТКЛЮЧЕНА (verify=False) — только для тест-стендов")
 
         logger.info("Базовый URL: %s", self.base_url)
 
