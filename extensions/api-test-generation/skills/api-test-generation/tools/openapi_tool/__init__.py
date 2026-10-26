@@ -2,7 +2,7 @@
 OpenAPI Tool — парсинг OpenAPI-спецификаций и генерация Pydantic-моделей.
 
 Запуск из корня проекта:
-    python .gigacode/tools/openapi_tool/main.py <spec_path_or_url> <output_dir>
+    python "<skill_dir>/tools/openapi_tool/main.py" <spec_path_or_url> <output_dir>
 """
 
 from .models import Endpoint, ParsedOpenAPI, SchemaField

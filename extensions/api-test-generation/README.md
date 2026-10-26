@@ -6,7 +6,7 @@ API-автотест (pytest + Allure) и прогоняет его. Всю ра
 автоматической самокоррекцией. Цель — «дал ссылку на кейс → через ~10 минут готовый прогнанный тест».
 
 Это README **для человека, который пользуется скиллом** (обычно QA-тестировщик). Внутренняя
-документация пайплайна (для разработчиков скилла) живёт в `SKILL.md` и `design/common-principles.md`.
+документация пайплайна (для разработчиков скилла) живёт в `skills/api-test-generation/SKILL.md` и `skills/api-test-generation/references/common-principles.md`.
 
 ---
 
@@ -53,17 +53,25 @@ API-автотест (pytest + Allure) и прогоняет его. Всю ра
 
 ## Быстрый старт
 
-В диалоге с ассистентом отправьте команду:
+Установите extension из каталога с ним:
+
+```bash
+gigacode extensions install .
+```
+
+Затем в проекте с тестами запустите команду:
 
 ```
-Сгенерируй автотест по кейсу: <JIRA_HOST>/secure/Tests.jspa#/testCase/<PROJECT_KEY>-TXXXX
+/api-test-generation <JIRA_HOST>/secure/Tests.jspa#/testCase/<PROJECT_KEY>-TXXXX
 ```
 
 или
 
 ```
-Сгенерируй автотесты по Swagger: https://…/openapi.json
+/api-test-generation https://…/openapi.json
 ```
+
+Работает и обычная просьба в диалоге: «Сгенерируй автотест по кейсу …».
 
 Пайплайн пройдёт 7 шагов автоматически, без вопросов между ними. Финальный автотест появится
 в `<test_suites>/test_<feature>.py`, сводка прогона — в `report.json`.

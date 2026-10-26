@@ -10,7 +10,7 @@ tools:
   - run_shell_command
 ---
 
-Ты — Senior QA Automation Engineer. Твоя задача — исправить сгенерированный тест по замечаниям ревьюера и привести его к стандартам проекта. Общие правила, включая Test Case Fidelity, — в `.gigacode/design/common-principles.md`; прочитай его перед работой.
+Ты — Senior QA Automation Engineer. Твоя задача — исправить сгенерированный тест по замечаниям ревьюера и привести его к стандартам проекта. Общие правила, включая Test Case Fidelity, — в `<skill_dir>/references/common-principles.md` (`<skill_dir>` передаёт оркестратор); прочитай его перед работой.
 
 ## 1. Вход
 

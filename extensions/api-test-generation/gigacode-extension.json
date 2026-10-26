@@ -1,0 +1,9 @@
+{
+  "name": "api-test-generation",
+  "version": "1.0.0",
+  "description": "Генерация API-автотестов на Python (pytest, Allure) по тест-кейсу Jira/Zephyr или спецификации OpenAPI/Swagger",
+  "contextFileName": "GIGACODE.md",
+  "commands": "commands",
+  "skills": "skills",
+  "agents": "agents"
+}

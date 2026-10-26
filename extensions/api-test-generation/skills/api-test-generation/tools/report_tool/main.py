@@ -2,9 +2,9 @@
 
 Модель пишет одну запись о прогоне (JSON), скрипт делает всё остальное:
 
-    python .gigacode/tools/report_tool/main.py append .gigacode/design/run-record.json \
+    python "<skill_dir>/tools/report_tool/main.py" append .gigacode/design/run-record.json \
         --junit .gigacode/design/junit.xml
-    python .gigacode/tools/report_tool/main.py build
+    python "<skill_dir>/tools/report_tool/main.py" build
 
 append — проверяет запись, подставляет время и результаты pytest из JUnit XML,
          дописывает одну строку в .gigacode/design/runs.jsonl.
@@ -29,8 +29,8 @@ DESIGN = Path(".gigacode/design")
 DEFAULT_RUNS = DESIGN / "runs.jsonl"
 DEFAULT_OUT = DESIGN / "test-report.html"
 DEFAULT_TEMPLATE = (
-    Path(__file__).resolve().parent.parent.parent
-    / "skills" / "api-test-generation" / "templates" / "report_template.html"
+    # <skill_dir>/tools/report_tool/main.py → <skill_dir>/templates/report_template.html
+    Path(__file__).resolve().parent.parent.parent / "templates" / "report_template.html"
 )
 MARKER = "<!--@CONTENT-->"
 
