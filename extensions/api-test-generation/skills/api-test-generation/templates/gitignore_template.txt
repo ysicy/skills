@@ -12,6 +12,9 @@ venv/
 .env
 .env.local
 
+# Артефакты прогонов api-test-generation: текст кейсов, ответы стенда, история
+.gigacode/design/
+
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/

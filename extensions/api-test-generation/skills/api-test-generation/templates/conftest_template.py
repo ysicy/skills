@@ -67,7 +67,10 @@ _USERS = {
 
 def _user_headers(user_key: str) -> dict:
     """Заголовки пользователя со значениями из окружения."""
-    spec = _USERS.get(user_key, _USERS["user_1"])
+    if user_key not in _USERS:
+        # Опечатка в parametrize не должна молча запускать тест под другим пользователем.
+        raise KeyError(f"Неизвестный пользователь {user_key!r}, есть: {', '.join(sorted(_USERS))}")
+    spec = _USERS[user_key]
     missing = [var for var in spec.values() if not os.environ.get(var)]
     if missing:
         raise RuntimeError(f"Не заданы переменные окружения пользователя {user_key}: {', '.join(missing)}")

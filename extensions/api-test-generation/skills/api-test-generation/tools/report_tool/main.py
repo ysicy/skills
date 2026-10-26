@@ -46,8 +46,18 @@ def _fail(msg: str) -> None:
     sys.exit(2)
 
 
+MAX_JUNIT_BYTES = 20 * 1024 * 1024
+
+
 def parse_junit(path: Path) -> dict[str, dict]:
-    """Результаты pytest по имени теста: {name: {status, duration, message}}."""
+    """Результаты pytest по имени теста: {name: {status, duration, message}}.
+
+    junit.xml — артефакт прогона, имена тестов в нём пишет модель, поэтому файл
+    читается с лимитом размера. Внешние сущности ElementTree не раскрывает.
+    """
+    size = path.stat().st_size
+    if size > MAX_JUNIT_BYTES:
+        raise ValueError(f"{path}: {size} байт — больше лимита {MAX_JUNIT_BYTES}; это не junit одного прогона")
     root = ET.parse(path).getroot()
     out: dict[str, dict] = {}
     for case in root.iter("testcase"):

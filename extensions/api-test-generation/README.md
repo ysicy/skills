@@ -83,7 +83,9 @@ GigaCode пользователя или проекта. Пример настр
     "allow": [
       "Bash(python -m pytest *)",
       "Bash(python -m py_compile *)",
-      "Bash(python \"<путь к skills/api-test-generation>/tools/*)",
+      "Bash(python \"<путь к skills/api-test-generation>/tools/hash_project.py\"*)",
+      "Bash(python \"<путь к skills/api-test-generation>/tools/openapi_tool/main.py\"*)",
+      "Bash(python \"<путь к skills/api-test-generation>/tools/report_tool/main.py\"*)",
       "Bash(git status *)",
       "Bash(git diff *)",
       "Agent(code-pattern-matcher)",
@@ -104,6 +106,7 @@ GigaCode пользователя или проекта. Пример настр
 - Скиллу нужно только **чтение** кейсов из Jira/Zephyr; инструменты записи в Jira разрешать не нужно.
 - Общий `"Bash"` не добавляйте: он разрешает любую команду без подтверждения. Без правила на `python -m pytest` GigaCode будет спрашивать подтверждение на каждый прогон теста — это допустимо, просто менее автономно.
 - Токены — только через `$secret:`, не открытым текстом.
+- Добавьте `.gigacode/design/` в `.gitignore` проекта: там текст кейсов, ответы стенда и история прогонов. Если скилл собирает каркас с нуля, он делает это сам.
 
 ## Быстрый старт
 

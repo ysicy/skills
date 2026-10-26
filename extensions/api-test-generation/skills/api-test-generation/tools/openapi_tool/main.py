@@ -218,6 +218,12 @@ def run_tool():
             print('  python "<skill_dir>/tools/openapi_tool/main.py" <spec_path> <output_dir>')
             sys.exit(1)
 
+    project_root = Path.cwd().resolve()
+    target = (project_root / output_dir).resolve()
+    if target != project_root and project_root not in target.parents:
+        print(f"❌ Каталог моделей {output_dir} вне проекта {project_root} — запись отклонена")
+        sys.exit(1)
+
     try:
         result = parse_openapi(source, output_dir)
         print(f"✅ Сгенерировано {len(result['schemas'])} моделей")
