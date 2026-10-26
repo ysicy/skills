@@ -21,10 +21,10 @@
 Перевод строк нормализуется (CRLF -> LF), чтобы хэш совпадал на Windows и Linux.
 
 Использование (из корня проекта или с явным корнем):
-    python .gigacode/tools/hash_project.py
-    python .gigacode/tools/hash_project.py <project_root>
-    python .gigacode/tools/hash_project.py <project_root> spec.yaml https://host/openapi.json
-    python .gigacode/tools/hash_project.py --include-tests
+    python "<skill_dir>/tools/hash_project.py"
+    python "<skill_dir>/tools/hash_project.py" <project_root>
+    python "<skill_dir>/tools/hash_project.py" <project_root> spec.yaml https://host/openapi.json
+    python "<skill_dir>/tools/hash_project.py" --include-tests
 
 Вывод: одна строка — MD5-хэш.
 """

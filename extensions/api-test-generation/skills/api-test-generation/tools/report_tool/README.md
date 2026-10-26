@@ -6,9 +6,9 @@
 # 1. validator запускает pytest с JUnit:
 python -m pytest <test_suites>/test_<feature>.py -v --junitxml=.gigacode/design/junit.xml
 # 2. оркестратор пишет .gigacode/design/run-record.json (формат ниже) и дописывает его в историю:
-python .gigacode/tools/report_tool/main.py append .gigacode/design/run-record.json --junit .gigacode/design/junit.xml
+python "<skill_dir>/tools/report_tool/main.py" append .gigacode/design/run-record.json --junit .gigacode/design/junit.xml
 # 3. сборка дашборда из всей истории:
-python .gigacode/tools/report_tool/main.py build
+python "<skill_dir>/tools/report_tool/main.py" build
 ```
 
 - История — `.gigacode/design/runs.jsonl`, по одной строке на прогон, только дописывается. Удалишь файл — дашборд начнётся с нуля.

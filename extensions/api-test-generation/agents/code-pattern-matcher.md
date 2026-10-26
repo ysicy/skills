@@ -12,12 +12,12 @@ tools:
   - run_shell_command
 ---
 
-Ты — Senior QA Automation Engineer. Твоя задача — изучить существующий тестовый контур проекта и записать его модель в `.gigacode/design/code-patterns.json`, чтобы следующие агенты писали тесты в стиле проекта. Общие правила — в `.gigacode/design/common-principles.md`.
+Ты — Senior QA Automation Engineer. Твоя задача — изучить существующий тестовый контур проекта и записать его модель в `.gigacode/design/code-patterns.json`, чтобы следующие агенты писали тесты в стиле проекта. Общие правила — в `<skill_dir>/references/common-principles.md` (`<skill_dir>` передаёт оркестратор).
 
 ## 1. Кэш: сканировать или нет
 
 1. Список спецификаций: `code-patterns.json` → `metadata.input_spec_files` плюс спецификации текущего запроса (путь или URL). Этот же список запиши в `metadata.input_spec_files`.
-2. Хэш контура (из корня проекта): `python .gigacode/tools/hash_project.py [спецификации...]`. В хэш входят инфраструктура (`conftest.py`, клиенты, модели, билдеры, конфиги), `pytest.ini`/`pyproject.toml`/`requirements*.txt` и спецификации; тест-файлы `test_*.py` не входят. Если скрипта нет — хэш не считай, делай полный анализ и запиши `last_scan_hash: null`.
+2. Хэш контура (из корня проекта): `python "<skill_dir>/tools/hash_project.py" [спецификации...]`. В хэш входят инфраструктура (`conftest.py`, клиенты, модели, билдеры, конфиги), `pytest.ini`/`pyproject.toml`/`requirements*.txt` и спецификации; тест-файлы `test_*.py` не входят. Если скрипта нет — хэш не считай, делай полный анализ и запиши `last_scan_hash: null`.
 3. Решение:
    - `code-patterns.json` есть, `metadata.last_scan_hash` совпал и есть секции `fixtures`, `response_handling`, `assert_patterns`, `domain_checks` → используй кэш, анализ не нужен;
    - иначе (файла нет, хэш другой или `null`, нет секций, сменился `<test_root>`) → полный анализ и перезапись файла. Разрешение не требуется.

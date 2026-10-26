@@ -11,20 +11,29 @@
 
 ---
 
-## 1. Что перенести в новый репозиторий
+## 1. Установка
 
-Скилл живёт в папке .gigacode. Переносите как единый комплект:
+Скилл поставляется как GigaCode extension и в проект не копируется:
 
-```
-.gigacode/skills/api-test-generation/     # сам скилл (SKILL.md, README.md, templates/)
-.gigacode/agents/                         # 7 субагентов пайплайна
-.gigacode/design/common-principles.md     # ядро правил пайплайна
-.gigacode/tools                           # инструменты
-.gigacode/GIGACODE.md                     # Инструкция для агента
-.gigacode/settings.json                   # Настройки mcp, права агента
+```bash
+gigacode extensions install <путь-к-extension>
 ```
 
-Остальное в `.gigacode/design/` (`code-patterns.json`, `requirements.json`, `test-cases.md`,
+Состав extension:
+
+```
+GIGACODE.md                                   # точка входа
+commands/api-test-generation.md               # команда /api-test-generation
+agents/                                       # 7 субагентов пайплайна
+skills/api-test-generation/SKILL.md           # правила оркестратора
+skills/api-test-generation/references/        # общие правила пайплайна
+skills/api-test-generation/templates/         # шаблоны каркаса и дашборда
+skills/api-test-generation/tools/             # инструменты: OpenAPI, хэш контура, дашборд
+```
+
+Подключение Jira MCP и разрешения агента настраиваются в GigaCode пользователя или проекта (`settings.json`), в extension их нет.
+
+В проекте скилл создаёт `.gigacode/design/` (`code-patterns.json`, `requirements.json`, `test-cases.md`,
 `report.json`, `quality-gate.json`, `fix-history.md`) — это **артефакты прогонов**, а не часть
 скилла. На новом проекте они будут созданы заново при первом прогоне. Если переносите
 накопленный опыт — можно взять только `fix-history.md` (базу знаний), но это опционально.

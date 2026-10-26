@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Set
 
 if __package__ in (None, ""):
-    # Запуск как скрипта: python .gigacode/tools/openapi_tool/main.py ...
+    # Запуск как скрипта: python "<skill_dir>/tools/openapi_tool/main.py" ...
     # Относительные импорты работают только внутри пакета, поэтому подключаем пакет по пути.
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     from openapi_tool.generator import PydanticGenerator
@@ -217,7 +217,7 @@ def run_tool():
 
     if len(sys.argv) < 2:
         print("❌ Укажи путь к OpenAPI-спецификации")
-        print("Пример: python .gigacode/tools/openapi_tool/main.py docs/openapi.json tests/models")
+        print('Пример: python "<skill_dir>/tools/openapi_tool/main.py" docs/openapi.json tests/models')
         sys.exit(1)
 
     source = sys.argv[1]
@@ -233,7 +233,7 @@ def run_tool():
         else:
             print("❌ Не передан output_dir, а test_root не найден в .gigacode/design/code-patterns.json")
             print("Укажи путь вторым аргументом:")
-            print("  python .gigacode/tools/openapi_tool/main.py <spec_path> <output_dir>")
+            print('  python "<skill_dir>/tools/openapi_tool/main.py" <spec_path> <output_dir>')
             sys.exit(1)
 
     try:
