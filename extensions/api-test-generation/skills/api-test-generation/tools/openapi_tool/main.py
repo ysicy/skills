@@ -1,6 +1,7 @@
 """
 Основной модуль OpenAPI Tool.
 """
+import ast
 import sys
 from pathlib import Path
 from typing import Any, Dict, Optional, Set
@@ -32,14 +33,12 @@ def _read_existing_schemas(models_dir: str, skip_file: Optional[str] = None) -> 
         if skip_file and py_file.name == skip_file:
             continue
         try:
-            content = py_file.read_text(encoding="utf-8")
-            for line in content.splitlines():
-                line = line.strip()
-                if line.startswith("class ") and "BaseModel" in line:
-                    class_name = line.split("(")[0].replace("class ", "")
-                    existing.add(class_name)
-        except Exception:
+            tree = ast.parse(py_file.read_text(encoding="utf-8"))
+        except (OSError, SyntaxError, UnicodeDecodeError):
             continue
+        for node in tree.body:
+            if isinstance(node, ast.ClassDef):
+                existing.add(node.name)
 
     return existing
 
