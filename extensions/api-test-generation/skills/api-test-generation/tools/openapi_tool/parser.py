@@ -15,6 +15,8 @@ HTTP_METHODS = {"get", "post", "put", "delete", "patch", "head", "options"}
 def to_class_name(name: str) -> str:
     """Имя схемы → допустимое имя Python-класса (Book.Response → Book_Response)."""
     cleaned = re.sub(r"\W", "_", name)
+    if cleaned and not cleaned.isidentifier():
+        cleaned = re.sub(r"[^0-9A-Za-z_]", "_", cleaned)
     if not cleaned or cleaned[0].isdigit():
         cleaned = f"Model_{cleaned}"
     if keyword.iskeyword(cleaned):
