@@ -15,15 +15,14 @@
 2. Конфигурация раннера и зависимости: pytest.ini, pyproject.toml, setup.cfg,
    tox.ini, requirements*.txt, .env.example.
 3. Внешние спецификации (Swagger/OpenAPI), переданные аргументами: локальные
-   файлы — по содержимому; URL — по содержимому, если его удалось скачать,
-   иначе только по самой строке URL (с предупреждением в stderr).
+   файлы — по содержимому; URL — только по самой строке (сеть не используется).
 
 Перевод строк нормализуется (CRLF -> LF), чтобы хэш совпадал на Windows и Linux.
 
 Использование (из корня проекта или с явным корнем):
     python "<skill_dir>/tools/hash_project.py"
     python "<skill_dir>/tools/hash_project.py" <project_root>
-    python "<skill_dir>/tools/hash_project.py" <project_root> spec.yaml https://host/openapi.json
+    python "<skill_dir>/tools/hash_project.py" <project_root> spec.yaml
     python "<skill_dir>/tools/hash_project.py" --include-tests
 
 Вывод: одна строка — MD5-хэш.
@@ -32,7 +31,6 @@
 import argparse
 import hashlib
 import sys
-import urllib.request
 from pathlib import Path
 from typing import Iterable, List, Optional
 
@@ -42,7 +40,6 @@ IGNORED_DIRS = {
     "node_modules", "build", "dist", "allure-results", "allure-report",
 }
 CONFIG_NAMES = {"pytest.ini", "pyproject.toml", "setup.cfg", "tox.ini", ".env.example"}
-URL_TIMEOUT_SEC = 10
 
 
 def _is_test_file(path: Path) -> bool:
@@ -77,13 +74,9 @@ def _normalized(data: bytes) -> bytes:
 
 def _read_spec(spec: str) -> Optional[bytes]:
     if spec.startswith(("http://", "https://")):
-        try:
-            with urllib.request.urlopen(spec, timeout=URL_TIMEOUT_SEC) as resp:
-                return resp.read()
-        except Exception as exc:  # сеть/доступ — не повод падать, но изменения спеки не увидим
-            print(f"[hash_project] не удалось скачать {spec}: {exc}; в хэш входит только URL",
-                  file=sys.stderr)
-            return None
+        # Сеть не используется: для ссылки в хэш входит только сама строка URL.
+        # Чтобы хэш видел изменения спецификации, передай путь к сохранённому файлу.
+        return None
     path = Path(spec)
     if path.is_file():
         return path.read_bytes()

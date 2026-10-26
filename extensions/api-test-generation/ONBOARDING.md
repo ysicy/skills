@@ -33,6 +33,44 @@ skills/api-test-generation/tools/             # инструменты: OpenAPI,
 
 Подключение Jira MCP и разрешения агента настраиваются в GigaCode пользователя или проекта (`settings.json`), в extension их нет.
 
+Пример настроек проекта (`.gigacode/settings.json`) — подставьте свои адреса и секреты:
+
+```json
+{
+  "mcpServers": {
+    "jira": {
+      "type": "streamable-http",
+      "httpUrl": "<JIRA_MCP_URL>",
+      "headers": { "x-jira-token": "$secret:jira/x-jira-token" }
+    }
+  },
+  "tools": { "approvalMode": "auto-edit" },
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest *)",
+      "Bash(python -m py_compile *)",
+      "Bash(python \"<путь к skills/api-test-generation>/tools/*)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Agent(code-pattern-matcher)",
+      "Agent(requirements-analyst)",
+      "Agent(test-case-designer)",
+      "Agent(test-generator)",
+      "Agent(test-reviewer)",
+      "Agent(test-fixer)",
+      "Agent(test-validator)",
+      "Skill(api-test-generation)",
+      "mcp__jira__zephyr_get_test_case",
+      "mcp__jira__zephyr_search_test_cases"
+    ]
+  }
+}
+```
+
+- Скиллу нужно только **чтение** кейсов из Jira/Zephyr; инструменты записи в Jira разрешать не нужно.
+- Общий `"Bash"` не добавляйте: он разрешает любую команду без подтверждения. Без правила на `python -m pytest` GigaCode будет спрашивать подтверждение на каждый прогон теста — это допустимо, просто менее автономно.
+- Токены — только через `$secret:`, не открытым текстом.
+
 В проекте скилл создаёт `.gigacode/design/` (`code-patterns.json`, `requirements.json`, `test-cases.md`,
 `report.json`, `quality-gate.json`, `fix-history.md`) — это **артефакты прогонов**, а не часть
 скилла. На новом проекте они будут созданы заново при первом прогоне. Если переносите
