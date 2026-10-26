@@ -112,7 +112,7 @@ python -c "from <test_root>.rest.core.http_client import HttpClient; print('OK')
 
 - [ ] `requirements.txt` установлены
 - [ ] `pytest.ini` создан, маркеры зарегистрированы
-- [ ] `.env` заполнен, `TEST_BASE_URL` валидный
+- [ ] `.env` заполнен, `TEST_BASE_URL` валидный, токены пользователей — в `.env`, а не в `conftest.py`
 - [ ] Модели отражают реальные ответы API
 - [ ] HTTP-клиент авторизуется (mTLS/Bearer)
 - [ ] Хотя бы один клиент-ресурс реализован
