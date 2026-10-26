@@ -16,6 +16,7 @@ conftest.py — корневой файл тестового контура. З�
 """
 
 import os
+from urllib.parse import urlparse
 
 import pytest
 
@@ -31,28 +32,55 @@ def _env_or_default(name: str, default: str) -> str:
     return os.environ.get(name, default)
 
 
+def _checked_base_url(url: str) -> str:
+    """Не даёт тестам (и токенам в их заголовках) уйти на случайный хост.
+
+    Допускаются только http/https. Если задан TEST_ALLOWED_HOSTS (хосты через
+    запятую), хост URL обязан быть в этом списке.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise ValueError(f"TEST_BASE_URL должен быть http(s)-адресом, получено: {url!r}")
+    allowed = {h.strip().lower() for h in os.environ.get("TEST_ALLOWED_HOSTS", "").split(",") if h.strip()}
+    if allowed and parsed.hostname.lower() not in allowed:
+        raise ValueError(
+            f"Хост {parsed.hostname!r} не входит в TEST_ALLOWED_HOSTS ({', '.join(sorted(allowed))})"
+        )
+    return url
+
+
 @pytest.fixture(scope="session")
 def base_url() -> str:
     """Базовый URL API (переопределяется через TEST_BASE_URL)."""
-    return _env_or_default("TEST_BASE_URL", "<test_base_url>")
+    return _checked_base_url(_env_or_default("TEST_BASE_URL", "<test_base_url>"))
 
 
 # 3. Тестовые пользователи
-# Ключ — алиас, значение — заголовки/токены, уходящие в клиенты.
+# Ключ — алиас, значение — заголовки, уходящие в клиенты: имя заголовка → имя
+# переменной окружения с его значением. Сами токены в код не пишутся: они лежат
+# в .env (не коммитится) или в переменных окружения CI.
 _USERS = {
-    "user_1": {"<header_1>": "<value>", "<header_2>": "<value>"},
-    "user_2": {"<header_1>": "<value>", "<header_2>": "<value>"},
+    "user_1": {"<header_1>": "TEST_USER_1_<HEADER_1>", "<header_2>": "TEST_USER_1_<HEADER_2>"},
+    "user_2": {"<header_1>": "TEST_USER_2_<HEADER_1>", "<header_2>": "TEST_USER_2_<HEADER_2>"},
 }
+
+
+def _user_headers(user_key: str) -> dict:
+    """Заголовки пользователя со значениями из окружения."""
+    spec = _USERS.get(user_key, _USERS["user_1"])
+    missing = [var for var in spec.values() if not os.environ.get(var)]
+    if missing:
+        raise RuntimeError(f"Не заданы переменные окружения пользователя {user_key}: {', '.join(missing)}")
+    return {header: os.environ[var] for header, var in spec.items()}
 
 
 @pytest.fixture(scope="function")
 def user(request) -> dict:
-    """Возвращает данные пользователя по ключу из параметризации.
+    """Возвращает заголовки пользователя по ключу из параметризации.
 
     Параметризация: @pytest.mark.parametrize("user", ["user_2"], indirect=True)
     """
-    user_key = getattr(request, "param", "user_1")
-    return _USERS.get(user_key, _USERS["user_1"])
+    return _user_headers(getattr(request, "param", "user_1"))
 
 
 # 4. Клиенты
