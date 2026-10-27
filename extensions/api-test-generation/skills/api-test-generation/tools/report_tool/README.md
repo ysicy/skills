@@ -4,15 +4,15 @@
 
 ```bash
 # 1. оператор запускает pytest с JUnit по команде, которую выдал validator:
-python -m pytest <test_suites>/test_<feature>.py -v --junitxml=.gigacode/design/junit.xml
+python -m pytest <test_suites>/test_<feature>.py -v --junitxml=.gigacode/design/junit-<N>.xml
 # 2. оркестратор пишет .gigacode/design/run-record.json (формат ниже) и дописывает его в историю:
-python "<skill_dir>/tools/report_tool/main.py" append .gigacode/design/run-record.json --junit .gigacode/design/junit.xml
+python "<skill_dir>/tools/report_tool/main.py" append .gigacode/design/run-record.json --junit .gigacode/design/junit-<N>.xml
 # 3. сборка дашборда из всей истории:
 python "<skill_dir>/tools/report_tool/main.py" build
 ```
 
 - История — `.gigacode/design/runs.jsonl`, по одной строке на прогон, только дописывается. Удалишь файл — дашборд начнётся с нуля.
-- Дашборд — `.gigacode/design/test-report.html`, body-фрагмент без внешних ссылок, публикуется как Artifact как есть.
+- Дашборд — `.gigacode/design/test-report.html`, body-фрагмент без внешних ссылок; открывается локально в браузере, никуда не отправляется.
 - Оформление — `skills/api-test-generation/templates/report_template.html` (только стили и маркер `<!--@CONTENT-->`).
 - `recorded_at` и статусы/длительности тестов ставит скрипт: время — текущее UTC, статусы — из JUnit.
 
