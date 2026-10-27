@@ -78,16 +78,18 @@ description: >
 
 ## 3a. Запуск теста оператором
 
-1. Validator в фазе `prepare` возвращает каталог, команду и список ожидаемых тестов. Покажи их оператору дословно:
+1. Validator в фазе `prepare` возвращает каталог, команду и список ожидаемых тестов. Перед показом удали старый результат: `python -c "import os; os.path.exists('.gigacode/design/junit.xml') and os.remove('.gigacode/design/junit.xml')"` — тогда `junit.xml`, появившийся после команды, точно от этого запуска. Покажи оператору дословно:
 
    ```
    ▶️ Запусти из <каталог>:
    <команда>
    и напиши «готово» (или пришли вывод, если что-то пошло не так).
+   Запускай как привык (`pytest`, `uv run`, `.venv`…) — важно оставить
+   этот селектор и --junitxml=.gigacode/design/junit.xml.
    ```
 
-   Запиши в `.gigacode/design/run-state.json`: `{"phase": "waiting_test_run", "iteration": N, "command": "...", "expected_tests": [...], "issued_at": "<ISO-8601>"}` — по нему прогон продолжается и в новой сессии. Заверши ответ и жди.
-2. Оператор написал «готово» или прислал вывод — запусти validator в фазе `analyze`: номер итерации, `issued_at`, ожидаемые тесты, вывод оператора, если есть.
+   Запиши в `.gigacode/design/run-state.json`: `{"phase": "waiting_test_run", "iteration": N, "command": "...", "expected_tests": [...]}` — по нему прогон продолжается и в новой сессии. Заверши ответ и жди.
+2. Оператор написал «готово» или прислал вывод — запусти validator в фазе `analyze`: номер итерации, ожидаемые тесты, вывод оператора, если есть.
 3. Validator исправил код и вернул новую команду — снова п.1 со следующей итерацией. Вернул итог (прошло, внешний блокер, лимит) — удали `run-state.json` и переходи к отчёту (§8).
 4. Команду ты не меняешь и сам не выполняешь. Оператор ответил чем-то другим (вопрос, правка) — ответь и снова покажи ту же команду.
 
@@ -192,7 +194,7 @@ description: >
 
 ```json
 {
-  "_meta": {"schema_version": "2.0", "case_key": "<KEY> | [\"<KEY>\"]", "generated_by": "orchestrator", "generated_at": "<ISO-8601>", "skill_version": "<версия>"},
+  "_meta": {"schema_version": "2.0", "case_key": "<KEY> | [\"<KEY>\"]", "generated_by": "orchestrator", "generated_at": "<ISO-8601>", "skill_version": "<version из <skill_dir>/../../gigacode-extension.json>"},
   "pipeline": {
     "status": "completed | blocked", "mode": "single | batch",
     "steps": [{"id": "matcher", "status": "pass | fail | skipped", "artifact": "code-patterns.json", "duration_sec": 12, "attempts": 1, "note": "..."}],
