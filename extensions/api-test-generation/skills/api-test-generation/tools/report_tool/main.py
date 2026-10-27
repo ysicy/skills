@@ -72,7 +72,9 @@ def parse_junit(path: Path) -> dict[str, dict]:
         out[name] = {
             "status": status,
             "duration": round(float(case.get("time") or 0), 2),
-            "message": message[:300],
+            # Только первая строка и коротко: полный вывод (тела ответов стенда,
+            # данные) в историю прогонов не попадает.
+            "message": (message.splitlines() or [""])[0][:200],
             "classname": case.get("classname", ""),
         }
     return out
