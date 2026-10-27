@@ -3,7 +3,7 @@
 Модель пишет одну запись о прогоне (JSON), скрипт делает всё остальное:
 
     python "<skill_dir>/tools/report_tool/main.py" append .gigacode/design/run-record.json \
-        --junit .gigacode/design/junit.xml
+        --junit .gigacode/design/junit-<N>.xml
     python "<skill_dir>/tools/report_tool/main.py" build
 
 append — проверяет запись, подставляет время и результаты pytest из JUnit XML,
@@ -52,7 +52,7 @@ MAX_JUNIT_BYTES = 20 * 1024 * 1024
 def parse_junit(path: Path) -> dict[str, dict]:
     """Результаты pytest по имени теста: {name: {status, duration, message}}.
 
-    junit.xml — артефакт прогона, имена тестов в нём пишет модель, поэтому файл
+    junit-<N>.xml — артефакт прогона, имена тестов в нём пишет модель, поэтому файл
     читается с лимитом размера. Внешние сущности ElementTree не раскрывает.
     """
     size = path.stat().st_size
