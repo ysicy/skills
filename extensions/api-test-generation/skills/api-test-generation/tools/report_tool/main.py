@@ -154,7 +154,7 @@ def cmd_append(args: argparse.Namespace) -> None:
     for t in rec["tests"]:
         t.setdefault("status", "missing")
 
-    runs = Path(args.runs)
+    runs = _inside_project(Path(args.runs), "--runs")
     runs.parent.mkdir(parents=True, exist_ok=True)
     with runs.open("a", encoding="utf-8") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
@@ -503,6 +503,15 @@ def _pane_lessons(lessons: dict) -> str:
                  _table(["Дата", "Урок"], rows))
 
 
+def _inside_project(path: Path, what: str) -> Path:
+    """Запись только внутри текущего проекта (каталога запуска)."""
+    root = Path.cwd().resolve()
+    target = (root / path).resolve()
+    if target != root and root not in target.parents:
+        _fail(f"{what}: {path} вне проекта {root} — запись отклонена")
+    return target
+
+
 def cmd_build(args: argparse.Namespace) -> None:
     tpl_path = Path(args.template)
     try:
@@ -512,7 +521,7 @@ def cmd_build(args: argparse.Namespace) -> None:
     if MARKER not in tpl:
         _fail(f"в шаблоне {tpl_path} нет маркера {MARKER}")
     runs = load_runs(Path(args.runs))
-    out = Path(args.out)
+    out = _inside_project(Path(args.out), "--out")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(tpl.replace(MARKER, render(runs)), encoding="utf-8")
     print(f"report_tool: дашборд {out} — прогонов {len(runs)}")

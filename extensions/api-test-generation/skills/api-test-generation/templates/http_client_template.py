@@ -133,6 +133,21 @@ def parse_sse_lines(lines: Iterable[str]) -> List[SSEEvent]:
     return events
 
 
+_SECRET_KEY_PARTS = ("token", "password", "passwd", "secret", "authorization", "api_key", "apikey", "cookie", "session")
+
+
+def _redact(value: Any) -> Any:
+    """Копия JSON-структуры для логов и Allure: значения полей с секретами заменены на ***."""
+    if isinstance(value, dict):
+        return {
+            k: "***" if any(part in str(k).lower() for part in _SECRET_KEY_PARTS) else _redact(v)
+            for k, v in value.items()
+        }
+    if isinstance(value, list):
+        return [_redact(v) for v in value]
+    return value
+
+
 # 2. HTTP-клиент
 class HttpClient:
     """
@@ -332,11 +347,11 @@ class HttpClient:
                             else str(request.body)
                         )
                         body_json = json.loads(body_str)
-                        pretty_body = json.dumps(body_json, indent=2, ensure_ascii=False)
+                        pretty_body = json.dumps(_redact(body_json), indent=2, ensure_ascii=False)
                         allure.attach(pretty_body, name="Request Body", attachment_type=AttachmentType.JSON)
                         logger.info("    Request Body: %s", pretty_body)
                     except Exception:
-                        logger.info("    Request Body (raw): %s", request.body)
+                        logger.info("    Request Body (raw, %s байт): не JSON, в лог не выводится", len(request.body))
 
                 # Allure: статус ответа
                 logger.info("<-- %s %s", response.status_code, response.reason)
@@ -349,7 +364,7 @@ class HttpClient:
                 # Allure: тело ответа
                 try:
                     response_json = response.json()
-                    pretty_response = json.dumps(response_json, indent=2, ensure_ascii=False)
+                    pretty_response = json.dumps(_redact(response_json), indent=2, ensure_ascii=False)
                     allure.attach(pretty_response, name="Response Body", attachment_type=AttachmentType.JSON)
                     logger.info("    Response Body: %s", pretty_response)
                 except json.JSONDecodeError:

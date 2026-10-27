@@ -79,6 +79,9 @@ def validate_generated(code: str) -> None:
                 fail(node, f"вызов {name or type(func).__name__}")
 
 
+GENERATED_MARK = "# Сгенерировано из OpenAPI-спецификации"
+
+
 class PydanticGenerator:
     """Генератор Pydantic-моделей (v2) из разобранной спецификации."""
 
@@ -92,7 +95,7 @@ class PydanticGenerator:
         lines = [
             HEADER,
             "",
-            "# Сгенерировано из OpenAPI-спецификации",
+            GENERATED_MARK,
             f"# Title: {self._one_line(self.parsed.title)}",
             f"# Version: {self._one_line(self.parsed.version)}",
             "",
@@ -187,6 +190,11 @@ class PydanticGenerator:
 
     def save_to_file(self, output_path: str) -> str:
         path = Path(output_path)
+        if path.exists() and GENERATED_MARK not in path.read_text(encoding="utf-8", errors="replace"):
+            raise ValueError(
+                f"{path} существует и создан не openapi_tool — не перезаписываю. "
+                "Укажи другое имя файла моделей или убери файл вручную"
+            )
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(self.generate(), encoding="utf-8")
         return str(path)
