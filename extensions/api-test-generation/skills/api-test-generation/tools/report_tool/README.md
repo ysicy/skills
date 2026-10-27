@@ -3,7 +3,7 @@
 Модель пишет одну запись о прогоне, скрипт делает остальное: время, результаты pytest, суммы и HTML. Токены на сборку дашборда не тратятся, цифры не выдумываются.
 
 ```bash
-# 1. validator запускает pytest с JUnit:
+# 1. оператор запускает pytest с JUnit по команде, которую выдал validator:
 python -m pytest <test_suites>/test_<feature>.py -v --junitxml=.gigacode/design/junit.xml
 # 2. оркестратор пишет .gigacode/design/run-record.json (формат ниже) и дописывает его в историю:
 python "<skill_dir>/tools/report_tool/main.py" append .gigacode/design/run-record.json --junit .gigacode/design/junit.xml
