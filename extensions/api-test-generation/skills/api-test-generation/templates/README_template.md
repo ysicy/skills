@@ -45,6 +45,7 @@ pytest.ini         # конфигурация pytest (шаблон pytest_config
 - `pytest`
 - `requests`
 - `pydantic>=2`
+- `PyYAML` — если спецификация OpenAPI в YAML (нужен инструменту генерации моделей)
 - `allure-pytest`
 - (опц.) `python-dotenv` — если грузишь `.env`
 - (опц.) `allure-commons`
